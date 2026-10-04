@@ -1,12 +1,8 @@
-<p align="center">
-  <img src="public/images/bmm-logo.png" alt="Beast Mode Motors" width="140">
-</p>
-
-<h1 align="center">Beast Mode Motors</h1>
+<h1 align="center">Beast Mode Motors — Car Passport</h1>
 
 <p align="center">
-  A full-stack exotic &amp; performance car dealership platform: public showroom, customer accounts and a staff back-office.<br>
-  Built entirely on the Laravel ecosystem.
+  <strong>A verified, transferable history for every car — and a safer way to sell one privately.</strong><br>
+  Owners log work as it happens, the shop that did it confirms it with one click, and when the car is sold the whole history moves to the new owner.
 </p>
 
 <p align="center">
@@ -15,82 +11,105 @@
   <img alt="Filament 5" src="https://img.shields.io/badge/Filament-5-FDAE4B">
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white">
   <img alt="PHP 8.3" src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-86_passing-2ea44f">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-131_passing-2ea44f">
 </p>
 
 ![Home page](docs/screenshots/home.png)
 
-## Contents
+## The problem
 
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Tech stack](#tech-stack)
-- [Getting started](#getting-started)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Architecture notes](#architecture-notes)
-- [Project structure](#project-structure)
+Millions of used cars change hands between private owners every year, and those sales run on trust that nobody can check:
 
-## Features
+- **Good owners can't prove it.** Receipts live in glove boxes and inboxes, so a car serviced on time sells for the same price as a neglected one.
+- **Buyers can't verify anything.** History reports only know what insurers, auctions and some dealers report. Independent-shop and home maintenance is invisible.
+- **Odometer fraud still happens.** One reading every few years can't catch a rollback.
+- **Scams follow the money.** Fake escrow companies, "deployed" sellers and gift-card payments target exactly the people who skip dealers.
 
-### Showroom (public)
-- **Live inventory search.** Livewire-powered filters for make, body style, condition, powertrain, price, year and horsepower, plus sorting and pagination. Every filter syncs to the URL, so searches can be shared and bookmarked.
-- **Vehicle pages.** Photo gallery with lightbox, performance bars, full spec sheet, highlights, similar cars, a "price drop" badge, and `schema.org/Car` JSON-LD for rich search results.
-- **Test-drive booking.** Shows real availability: opening hours, minimum notice, a 30-day booking window, closed Sundays, and already-booked slots removed. The customer gets a reference code and an email.
-- **Make an offer.** Validated against the asking price (between 50% and 100%) and routed to the sales pipeline.
-- **Finance calculator.** Adjust deposit, term and APR to see an amortised monthly payment. Listing cards show a monthly estimate.
-- **Compare.** Put up to 3 cars side by side; the best figure in each row is highlighted.
-- **Sell / trade-in.** A two-step form gives an instant *indicative* valuation (age, mileage and condition depreciation model) and creates a trade-in lead.
-- **Brands, About, Contact, `sitemap.xml`, `robots.txt`, Open Graph tags.**
+Beast Mode Motors gives each car a **passport**: a running record kept by its owners, backed by evidence, and confirmed by the businesses that did the work. It follows the car, not the person.
 
-### My Garage (customers)
-- Save cars with ♥. **When staff cut the price of a saved car, everyone who saved it gets an email and an in-app alert.**
-- Upcoming and past test drives, with self-service cancellation.
-- Status tracking for offers, enquiries and trade-in requests.
-- Profile, password and account deletion (Breeze).
+## What it does
 
-### Back-office (`/admin`, staff only)
-- **Dashboard:** stock value, leads this month vs last month (with sparkline), upcoming test drives, win rate, a stacked leads-per-week chart, and a "new leads" inbox.
-- **Vehicles:** full CRUD with photo uploads and external photo URLs, a "reduce price" action that triggers alerts, "mark as sold", featured toggle, filters and global search (<kbd>⌘K</kbd>).
-- **Test drives:** Upcoming, Needs-confirmation and Past tabs; confirm, complete or cancel in one click. The customer is emailed on every change.
-- **Leads pipeline:** general, vehicle, finance, offer and trade-in leads move through New → Contacted → Qualified → Won/Lost, with inline status editing and bulk updates.
-- **Brands, Testimonials, Customers.**
+### For owners — the garage
+- **Add a car by VIN.** The check digit is validated (it catches typos and many forged VINs). The car is decoded from NHTSA's vPIC database, falling back to an offline decoder if that's unreachable. Open safety recalls are pulled, and a maintenance plan is created, with a separate schedule for EVs.
+- **Log work with evidence.** Each record has line items, receipts (PDF or photo), who did it and which maintenance items it covered. Every record is also an odometer reading.
+- **Shop verification.** One tap emails the shop a signed link that expires in 14 days. The shop confirms or disputes the record without creating an account. Confirmed records get a stamp and their facts are locked, so the confirmation stays meaningful.
+- **Integrity signals.** Odometer readings that go backwards are flagged. Records entered more than 30 days after the work are labelled "logged later". Entering a lower reading needs explicit confirmation.
+- **The Passport Score (0–100).** It measures how well the history is *evidenced*, not how much was spent. It covers identity, history coverage, quality of evidence, odometer integrity, and upkeep and recalls. The breakdown is always visible, with tips on how to improve it.
+- **Maintenance reminders** by mileage or time, whichever comes first. **Expiry alerts** for registration, insurance and warranties. **Weekly recall checks.** All are sent by email and in-app.
+- **Running costs.** Cost per month and per mile, a 12-month chart, spending by category, and real-world mpg or mi/kWh from fill-ups. Costs are private and never transfer to the next owner.
+- **Share links** with per-link privacy (masked VIN, hidden costs, receipts on or off), view counts, expiry and revocation. Also a **PDF report** and a printable **"For sale" window sign with a QR code**.
 
-### Engineering
-- Honeypot field and per-visitor rate limiting on every public form.
-- PHP backed enums for every status, shared by the storefront and Filament (labels and colours).
-- Queued mail and database notifications.
-- Money stored as whole dollars; eager loading throughout; database-agnostic queries (SQLite, MySQL, PostgreSQL).
-- 86 Pest tests covering inventory filters, booking rules, notifications, forms, authorization and Filament actions.
-- GitHub Actions CI: Pint, Pest on PHP 8.3 and 8.4, asset build, and a Docker image build.
+### For buyers and sellers — the marketplace
+- **Every listing is backed by its passport.** Search and sort by Passport Score, filter by make, price, year, mileage, powertrain and state.
+- **Deal room** for each buyer and seller pair:
+  - Messages and offers, with counter-offers and 72-hour expiry.
+  - A **pre-purchase inspection checklist** (18 points) for the buyer or their mechanic.
+  - A **handover checklist** where each person ticks only their own steps.
+  - A generated **bill of sale** (PDF).
+- **Scam shield.** Messages mentioning gift cards, wire transfers, fake escrow or shipping agents, "deployed overseas", verification codes or overpayment get flagged to the recipient with plain-English advice.
+- **Ownership transfer.** When both people confirm the handover, the passport moves to the buyer's garage as Owner N. What travels with the car and what stays private:
+
+  | Travels with the car | Stays with the seller |
+  | --- | --- |
+  | Service records and shop verifications | Running costs |
+  | Receipts, inspection reports, warranties, photos | Title, registration and insurance scans |
+  | Odometer history, recalls, maintenance plan | Share links (revoked) |
+
+- **No money handling, on purpose.** Fake escrow is one of the most common car-sale scams, so there's nothing for scammers to impersonate.
+
+### For the team — trust & safety console (`/admin`)
+- A dashboard with verification rate, live listings, completed transfers, open reports, and messages recently flagged by the scam shield.
+- **Listings:** remove a listing with a reason (shown to the seller), or restore it.
+- **Reports:** a review queue for listing reports.
+- **Deals:** filter to those with flagged messages.
+- **Shop verifications:** flags a "shop" email on the owner's own domain, a self-verification red flag.
+- **Cars and users.**
 
 ## Screenshots
 
-| Inventory | Vehicle page & booking |
+| Owner's car overview | Deal room (price agreed, inspection done) |
 | --- | --- |
-| ![Inventory](docs/screenshots/inventory.png) | ![Vehicle](docs/screenshots/vehicle.png) |
+| ![Car overview](docs/screenshots/car-overview.png) | ![Deal room](docs/screenshots/deal-room.png) |
 
-| Back-office dashboard | Leads pipeline |
+| Scam shield | Listing with its passport |
 | --- | --- |
-| ![Admin dashboard](docs/screenshots/admin-dashboard.png) | ![Leads](docs/screenshots/admin-leads.png) |
+| ![Scam shield](docs/screenshots/scam-shield.png) | ![Listing](docs/screenshots/listing.png) |
 
-<p align="center"><img src="docs/screenshots/mobile.png" alt="Mobile inventory" width="300"></p>
+| Shop verification (no account needed) | Trust & safety console |
+| --- | --- |
+| ![Shop verification](docs/screenshots/shop-verification.png) | ![Admin](docs/screenshots/admin.png) |
 
-> The seeded inventory uses Unsplash photo URLs. If a photo can't load, a branded placeholder is shown instead (as in some of the screenshots above). Staff can upload real photos from the back-office.
+| Marketplace | Service history | Free VIN check |
+| --- | --- | --- |
+| ![Marketplace](docs/screenshots/marketplace.png) | ![History](docs/screenshots/history.png) | ![VIN check](docs/screenshots/vin-check.png) |
+
+<p align="center"><img src="docs/screenshots/mobile-listing.png" alt="Mobile listing" width="300"></p>
+
+> The demo cars use generated studio-style illustrations rather than photos, so the public demo never depends on third-party images. Real users upload their own photos.
+
+## Try the demo
+
+Run it locally (below) or deploy it. Every account's password is `password`:
+
+| Account | What you'll see |
+| --- | --- |
+| `owner@beastmodemotors.test` | Three cars with multi-year histories, a Porsche for sale, a buyer countering, and a scammer the shield caught |
+| `buyer@beastmodemotors.test` | A BMW deal mid-handover (inspection done, checklist half ticked) and an MX-5 bought through the platform |
+| `admin@beastmodemotors.test` | The trust & safety console at `/admin` |
 
 ## Tech stack
 
 | Layer | Choice |
 | --- | --- |
-| Framework | Laravel 12 · PHP 8.3 |
-| Interactivity | Livewire 4 + Alpine.js |
+| Framework | Laravel 12, PHP 8.3 |
+| Interactivity | Livewire 4 + Alpine.js (no SPA build, no API layer) |
 | Back-office | Filament 5 |
-| Styling | Tailwind CSS 4 (CSS-first theme), self-hosted Bebas Neue + Inter |
-| Auth | Laravel Breeze (Blade), restyled |
-| Database | SQLite (dev / demo) · PostgreSQL or MySQL (production) |
-| Testing | Pest 3, Livewire & Filament testing helpers |
-| Tooling | Vite 7, Laravel Pint, GitHub Actions |
-| Hosting | Docker (Nginx + PHP-FPM via `serversideup/php`), Render blueprint |
+| Styling | Tailwind CSS 4 with design tokens; self-hosted Bricolage Grotesque, Inter and JetBrains Mono |
+| Documents | DomPDF (passport report, bill of sale), BaconQrCode (window sign) |
+| Data | NHTSA vPIC (VIN decoding) and Recalls APIs, both free and keyless |
+| Database | SQLite (dev/demo); PostgreSQL or MySQL in production |
+| Testing | Pest 3 with Livewire and Filament test helpers (131 tests) |
+| Delivery | GitHub Actions (Pint, Pest on PHP 8.3 and 8.4, Docker build), Docker (Nginx + PHP-FPM), Render blueprint |
 
 ## Getting started
 
@@ -99,84 +118,74 @@ Requirements: PHP 8.2+ with `intl`, `sqlite3` and `pdo_sqlite`; Composer 2; Node
 ```bash
 git clone https://github.com/VRAJ8/BeastModeMotors.git
 cd BeastModeMotors
-composer setup   # install deps, create .env + SQLite db, migrate + seed, build assets
-composer dev     # app server, queue worker, log tail and Vite together
+composer setup        # deps, .env, SQLite database, migrate + seed demo data, build assets
+composer dev          # app server, queue worker, log tail and Vite together
 ```
 
-Open http://localhost:8000.
+Open http://localhost:8000. Emails (shop verification requests, reminders, deal updates) go to `storage/logs/laravel.log`. Copy the signed link from a verification email into your browser to play the shop's side.
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Staff (`/admin`) | `admin@beastmodemotors.test` | `password` |
-| Customer | `customer@beastmodemotors.test` | `password` |
-
-To reset the demo data at any time, run `php artisan demo:seed --fresh`.
-
-Emails are written to `storage/logs/laravel.log` by default (`MAIL_MAILER=log`).
-
-## Testing
+Useful commands:
 
 ```bash
-php artisan test           # 86 tests
-vendor/bin/pint --test     # code style
+php artisan demo:seed --fresh          # rebuild the demo
+php artisan passport:send-reminders    # maintenance & document-expiry emails (daily)
+php artisan passport:sync-recalls      # NHTSA recall check (weekly)
+php artisan passport:housekeeping      # expire stale offers and verification links (hourly)
+php artisan test                       # 131 tests
+vendor/bin/pint --test                 # code style
 ```
 
 ## Deployment
 
 ### One-click demo on Render (free)
+1. Fork the repo. In Render choose **New → Blueprint** and select it; Render reads [`render.yaml`](render.yaml).
+2. Set `APP_KEY` (from `php artisan key:generate --show`) and `APP_URL` (your Render URL).
+3. Deploy. On first boot the container migrates and seeds the demo (`DEMO_MODE=true`).
 
-1. Fork this repo, then in Render choose **New → Blueprint** and select it. Render reads [`render.yaml`](render.yaml).
-2. When prompted, set:
-   - `APP_KEY` to the output of `php artisan key:generate --show`
-   - `APP_URL` to your Render URL, e.g. `https://beast-mode-motors.onrender.com`
-3. Deploy. On boot the container runs migrations and seeds the demo showroom (`DEMO_MODE=true`).
+The free plan has no persistent disk, so the demo resets on restart. For a real install, add PostgreSQL (`DB_CONNECTION=pgsql` plus the `DB_*` variables), point the `local` and `public` disks at S3, and configure a mailer.
 
-The free plan has no persistent disk, so the demo starts fresh after each restart. That suits a public demo where anyone can sign in as staff. For a persistent install, add a Render PostgreSQL database and set `DB_CONNECTION=pgsql` plus the `DB_*` variables.
-
-### Any Docker host (Railway, Fly.io, a VPS…)
+### Any Docker host
 
 ```bash
 docker build -t beast-mode-motors .
-docker run -p 8080:8080 \
-  -e APP_KEY=base64:... -e APP_URL=http://localhost:8080 \
-  -e DEMO_MODE=true -e QUEUE_CONNECTION=sync -e MAIL_MAILER=log \
-  beast-mode-motors
+docker run -p 8080:8080 -e APP_KEY=base64:... -e APP_URL=http://localhost:8080 \
+  -e DEMO_MODE=true -e QUEUE_CONNECTION=sync -e MAIL_MAILER=log beast-mode-motors
 ```
 
-The image is a multi-stage build: Vite assets → `composer install --no-dev` → Nginx + PHP-FPM with OPcache. On start it runs migrations, `storage:link` and config caching automatically.
-
-### Laravel Cloud / Forge
-
-Standard Laravel app: build with `composer install --no-dev && npm ci && npm run build`, deploy with `php artisan migrate --force`. Run a queue worker for queued mail, and the scheduler for the nightly demo reset.
+The image is a multi-stage build: Vite assets, then `composer install --no-dev`, then Nginx + PHP-FPM with OPcache. On start it migrates, links storage and caches config. Run `php artisan schedule:work` (or a cron calling `schedule:run`) for reminders and recall checks.
 
 ## Architecture notes
 
-- **`App\Services\TestDriveScheduler`** is the single source of truth for availability. The booking widget and the server-side validation both use it, so the UI can't offer a slot the server would reject, and a slot taken a moment earlier by someone else is caught on submit.
-- **Price-drop alerts** live in the `Vehicle` model lifecycle. A lower price records `previous_price` and notifies everyone who saved the car, whether the change comes from the back-office form, the "reduce price" action or code.
-- **Model events drive notifications:** a new `Lead` alerts the sales inbox, and a `TestDrive` status change emails the customer. Controllers and Livewire components stay thin.
-- **`App\Support\CompareList`** keeps the compare list in the session, so guests can compare without an account.
-- **`GuardsPublicForms`** is a Livewire trait that adds a honeypot, rate limiting and contact prefill for signed-in users to every public form.
-- **Enums** (`app/Enums`) implement Filament's `HasLabel` and `HasColor`, so badges look the same in the storefront and the back-office.
+- **All deal state changes go through `App\Services\DealFlow`.** That covers start, post, offer, counter, accept, cancel, handover and confirm. The Livewire deal room only calls it, so the rules live in one tested place.
+- **`App\Services\OwnershipTransfer`** completes a sale in one transaction. It closes the old ownership with the handover odometer reading, opens the next one, deletes personal paperwork, revokes share links, and cancels other buyers' deals.
+- **`App\Services\PassportScore`** is pure and explains itself. Each of its five components returns points, a detail line and a tip. Listings store a score snapshot for sorting and refresh it when viewed.
+- **Evidence is derived, not stored.** `ServiceRecord::evidence()` is computed from verification and dispute timestamps and attached receipts, so it can't drift out of sync.
+- **Every service record is also an odometer reading** (a model hook keeps the two in step). `OdometerAnalyzer` finds readings that go backwards.
+- **Shop verification uses Laravel signed URLs.** There are no tokens to store or leak, links expire, and the responder's name and IP are recorded with the answer.
+- **Defence in depth on authorization.** Garage routes use the `can:manage,vehicle` middleware, Livewire tab components re-check ownership on every request (`ManagesVehicle` trait), model properties are `#[Locked]`, and documents stream from a private disk through policy-checked routes.
+- **Offline-first VIN handling.** `VinDecoder` implements the ISO 3779 check digit, the 30-year model-year cycle and a manufacturer-code table. `Nhtsa` wraps the free APIs with caching and returns `null` on failure so callers fall back gracefully.
+- **The scam shield is rule-based on purpose.** Every flag can be explained to a user in one sentence, and there are no false "AI says so" warnings.
 
 ## Project structure
 
 ```
 app/
-├── Enums/                 # BodyType, Condition, VehicleStatus, LeadType, LeadStatus, …
-├── Filament/              # Back-office resources, pages and dashboard widgets
-├── Http/Controllers/      # Home, Vehicle, Brand, Compare, Garage, Sitemap
-├── Livewire/              # Inventory, BookTestDrive, MakeOffer, TradeInForm, ContactForm, …
-├── Models/                # Brand, Vehicle, TestDrive, Lead, Testimonial, User
-├── Notifications/         # PriceDropped, TestDriveUpdated, NewLeadReceived
-├── Services/              # TestDriveScheduler, TradeInEstimator
-└── Support/               # CompareList, Finance, helpers
-config/dealership.php      # Showroom details, opening hours, finance defaults, demo mode
-database/seeders/          # Realistic exotic-car line-up and demo activity
-resources/views/           # Blade storefront, components and Livewire views
-docs/PLAN.md               # Product plan and roadmap
+├── Console/Commands/     # send-reminders, sync-recalls, housekeeping, demo:seed
+├── Enums/                # ServiceCategory, DocumentType, ListingStatus, DealStatus, … (Filament labels & colours)
+├── Filament/             # Trust & safety console: resources and dashboard widgets
+├── Http/Controllers/     # Garage, Vehicle tabs, Marketplace, Passport, Deal, ShopVerification, …
+├── Livewire/             # AddVehicle, RecordForm, Vehicle/* tabs, Marketplace, DealRoom, VinCheck, …
+├── Models/               # Vehicle, Ownership, ServiceRecord, Document, OdometerReading, Listing, Deal, Offer, …
+├── Notifications/        # VerifyServiceRecord, VerificationAnswered, MaintenanceDue, RecallsFound, DealUpdate, …
+├── Policies/             # VehiclePolicy, DealPolicy
+├── Services/             # VinDecoder, Nhtsa, PassportScore, ScamShield, DealFlow, OwnershipTransfer, …
+└── Support/              # QR codes, demo car illustrations, helpers
+config/passport.php       # Maintenance schedules, inspection & handover checklists, NHTSA, verification
+database/seeders/         # A believable demo world: 12 people, 11 cars, deals in every state
+docs/PLAN.md              # Product plan, data model and roadmap
 ```
 
-See **[docs/PLAN.md](docs/PLAN.md)** for the product plan, the data model and the roadmap (Stripe deposits, Scout search, Reverb real-time features and more).
+See **[docs/PLAN.md](docs/PLAN.md)** for the product thinking, the data model and what comes next.
 
 ## License
 

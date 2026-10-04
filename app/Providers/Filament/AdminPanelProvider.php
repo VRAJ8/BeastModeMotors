@@ -28,23 +28,20 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('Beast Mode Motors')
-            ->brandLogo(asset('images/bmm-logo.png'))
-            ->brandLogoHeight('2.75rem')
-            ->favicon(asset('images/bmm-logo.png'))
-            ->darkMode(isForced: true)
+            ->brandName('Beast Mode Motors · Trust & Safety')
+            ->favicon(asset('favicon.svg'))
             ->colors([
-                'primary' => Color::hex('#d4a857'),
-                'gray' => Color::Neutral,
+                'primary' => Color::hex('#ff5b14'),
+                'gray' => Color::Stone,
             ])
             ->font('Inter')
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->sidebarCollapsibleOnDesktop()
-            ->navigationGroups(['Sales', 'Inventory', 'Content'])
+            ->navigationGroups(['Marketplace', 'Passports', 'People'])
             ->navigationItems([
-                NavigationItem::make('View storefront')
+                NavigationItem::make('Open the app')
                     ->url(fn () => route('home'), shouldOpenInNewTab: true)
-                    ->icon('heroicon-o-building-storefront')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
                     ->sort(100),
             ])
             ->databaseNotifications()

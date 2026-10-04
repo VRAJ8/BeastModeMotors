@@ -1,8 +1,10 @@
-@if (config('dealership.demo'))
-    <div {{ $attributes->class('rounded-lg border border-gold/30 bg-gold/5 p-4 text-sm') }}>
-        <p class="eyebrow mb-2">Demo accounts</p>
-        <p class="text-silver">Customer: <code class="text-white">customer@beastmodemotors.test</code></p>
-        <p class="text-silver">Staff (<a href="/admin" class="link-gold">/admin</a>): <code class="text-white">admin@beastmodemotors.test</code></p>
-        <p class="text-silver">Password for both: <code class="text-white">password</code></p>
+@if (config('passport.demo'))
+    <div {{ $attributes->class('rounded-xl border border-accent/30 bg-accent-soft p-4 text-sm') }}>
+        <p class="eyebrow mb-2 !text-accent-dark">Demo accounts · password <code class="font-mono">password</code></p>
+        <ul class="space-y-1 text-ink-soft">
+            <li><code class="font-mono text-ink">owner@beastmodemotors.test</code> — owner with cars & a live sale</li>
+            <li><code class="font-mono text-ink">buyer@beastmodemotors.test</code> — buyer mid-deal</li>
+            <li><code class="font-mono text-ink">admin@beastmodemotors.test</code> — trust & safety (<a href="/admin" class="link">/admin</a>)</li>
+        </ul>
     </div>
 @endif

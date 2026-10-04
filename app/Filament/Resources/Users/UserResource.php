@@ -24,11 +24,7 @@ class UserResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Sales';
-
-    protected static ?int $navigationSort = 3;
-
-    protected static ?string $navigationLabel = 'Customers';
+    protected static string|\UnitEnum|null $navigationGroup = 'People';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -47,7 +43,7 @@ class UserResource extends Resource
                     ->dehydrated(fn (?string $state) => filled($state))
                     ->helperText(fn (string $operation) => $operation === 'edit' ? 'Leave blank to keep the current password.' : null),
                 Toggle::make('is_admin')
-                    ->label('Back-office access')
+                    ->label('Trust & safety access')
                     ->disabled(fn (?User $record) => $record?->is(Auth::user())),
             ]);
     }
@@ -58,15 +54,13 @@ class UserResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')->description(fn (User $record) => $record->email)->searchable(['name', 'email']),
-                TextColumn::make('phone')->placeholder('—'),
-                TextColumn::make('favorites_count')->counts('favorites')->label('Saved cars')->sortable(),
-                TextColumn::make('test_drives_count')->counts('testDrives')->label('Test drives')->sortable(),
+                TextColumn::make('location')->state(fn (User $record) => $record->city ? "{$record->city}, {$record->state}" : null)->placeholder('—'),
+                TextColumn::make('vehicles_count')->counts('vehicles')->label('Cars')->sortable(),
+                TextColumn::make('listings_count')->counts('listings')->label('Listings')->sortable(),
                 IconColumn::make('is_admin')->label('Staff')->boolean(),
                 TextColumn::make('created_at')->label('Joined')->since()->sortable(),
             ])
-            ->filters([
-                TernaryFilter::make('is_admin')->label('Staff'),
-            ])
+            ->filters([TernaryFilter::make('is_admin')->label('Staff')])
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()->hidden(fn (User $record) => $record->is(Auth::user())),
@@ -75,8 +69,6 @@ class UserResource extends Resource
 
     public static function getPages(): array
     {
-        return [
-            'index' => ManageUsers::route('/'),
-        ];
+        return ['index' => ManageUsers::route('/')];
     }
 }

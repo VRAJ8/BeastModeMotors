@@ -1,4 +1,7 @@
 <x-guest-layout>
+    <h1 class="display text-2xl">Welcome back</h1>
+    <p class="mt-1 mb-6 text-sm text-muted">Sign in to your garage. New here? <a href="{{ route('register') }}" class="link">Create a free account</a></p>
+
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
     <x-demo-credentials class="mb-6" />
@@ -28,14 +31,14 @@
         <!-- Remember Me -->
         <div class="block mt-4">
             <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-steel bg-graphite text-gold shadow-sm focus:ring-gold" name="remember">
-                <span class="ms-2 text-sm text-mist">{{ __('Remember me') }}</span>
+                <input id="remember_me" type="checkbox" class="rounded border-line-strong bg-surface text-ink shadow-sm focus:ring-ink" name="remember">
+                <span class="ms-2 text-sm text-muted">{{ __('Remember me') }}</span>
             </label>
         </div>
 
         <div class="flex items-center justify-end mt-4">
             @if (Route::has('password.request'))
-                <a class="underline text-sm text-mist hover:text-gold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-ink focus:ring-gold" href="{{ route('password.request') }}">
+                <a class="underline text-sm text-muted hover:text-ink rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-paper focus:ring-ink" href="{{ route('password.request') }}">
                     {{ __('Forgot your password?') }}
                 </a>
             @endif

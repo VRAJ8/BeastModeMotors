@@ -1,29 +1,8 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="heading-display text-4xl">
-            {{ __('Profile') }}
-        </h2>
-    </x-slot>
-
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="card p-4 sm:p-8">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-profile-information-form')
-                </div>
-            </div>
-
-            <div class="card p-4 sm:p-8">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-password-form')
-                </div>
-            </div>
-
-            <div class="card p-4 sm:p-8">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
-            </div>
-        </div>
+<x-layouts.site title="Account" robots="noindex">
+    <div class="container-x max-w-3xl space-y-6 py-10">
+        <x-page-header eyebrow="Account" title="Your details" />
+        <div class="card card-pad">@include('profile.partials.update-profile-information-form')</div>
+        <div class="card card-pad">@include('profile.partials.update-password-form')</div>
+        <div class="card card-pad">@include('profile.partials.delete-user-form')</div>
     </div>
-</x-app-layout>
+</x-layouts.site>

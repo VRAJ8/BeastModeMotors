@@ -1,4 +1,7 @@
 <x-guest-layout>
+    <h1 class="display text-2xl">Start your car's passport</h1>
+    <p class="mt-1 mb-6 text-sm text-muted">Free for owners. Already have an account? <a href="{{ route('login') }}" class="link">Sign in</a></p>
+
     <form method="POST" action="{{ route('register') }}">
         @csrf
 
@@ -40,7 +43,7 @@
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-mist hover:text-gold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-ink focus:ring-gold" href="{{ route('login') }}">
+            <a class="underline text-sm text-muted hover:text-ink rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-paper focus:ring-ink" href="{{ route('login') }}">
                 {{ __('Already registered?') }}
             </a>
 

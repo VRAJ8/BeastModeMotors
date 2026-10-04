@@ -3,10 +3,9 @@
 @foreach ($urls as $url)
     <url>
         <loc>{{ $url['loc'] }}</loc>
-@isset($url['lastmod'])
-        <lastmod>{{ $url['lastmod']->toAtomString() }}</lastmod>
-@endisset
-        <priority>{{ $url['priority'] }}</priority>
+@if ($url['lastmod'])
+        <lastmod>{{ $url['lastmod'] }}</lastmod>
+@endif
     </url>
 @endforeach
 </urlset>

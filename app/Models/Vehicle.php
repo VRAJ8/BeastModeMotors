@@ -2,236 +2,195 @@
 
 namespace App\Models;
 
-use App\Enums\BodyType;
-use App\Enums\Condition;
-use App\Enums\Drivetrain;
 use App\Enums\FuelType;
-use App\Enums\Transmission;
-use App\Enums\VehicleStatus;
-use App\Notifications\PriceDropped;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Enums\ListingStatus;
+use Database\Factories\VehicleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * A physical car, identified by its VIN. Its history outlives any one owner.
+ */
 class Vehicle extends Model
 {
+    /** @use HasFactory<VehicleFactory> */
     use HasFactory;
 
-    public const PLACEHOLDER_IMAGE = '/images/placeholder-car.svg';
-
     protected $fillable = [
-        'brand_id',
-        'model',
-        'trim',
-        'slug',
-        'year',
-        'price',
-        'previous_price',
-        'mileage',
-        'body_type',
-        'condition',
-        'status',
-        'fuel_type',
-        'transmission',
-        'drivetrain',
-        'engine',
-        'horsepower',
-        'torque',
-        'zero_to_sixty',
-        'top_speed',
-        'exterior_color',
-        'interior_color',
-        'vin',
-        'description',
-        'features',
-        'images',
-        'is_featured',
-        'published_at',
-        'sold_at',
+        'user_id', 'vin', 'vin_valid', 'decode_source', 'decoded', 'year', 'make', 'model', 'trim', 'body',
+        'engine', 'drivetrain', 'transmission', 'fuel_type', 'exterior_color', 'nickname', 'current_mileage',
+        'recalls_checked_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'body_type' => BodyType::class,
-            'condition' => Condition::class,
-            'status' => VehicleStatus::class,
+            'vin_valid' => 'boolean',
+            'decoded' => 'array',
             'fuel_type' => FuelType::class,
-            'transmission' => Transmission::class,
-            'drivetrain' => Drivetrain::class,
-            'features' => 'array',
-            'images' => 'array',
-            'is_featured' => 'boolean',
-            'zero_to_sixty' => 'float',
-            'published_at' => 'datetime',
-            'sold_at' => 'datetime',
+            'recalls_checked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * @return HasMany<Ownership, $this>
+     */
+    public function ownerships(): HasMany
+    {
+        return $this->hasMany(Ownership::class)->orderBy('owner_number');
+    }
+
+    /**
+     * @return HasOne<Ownership, $this>
+     */
+    public function currentOwnership(): HasOne
+    {
+        return $this->hasOne(Ownership::class)->whereNull('ended_on')->latestOfMany('owner_number');
+    }
+
+    /**
+     * @return HasMany<ServiceRecord, $this>
+     */
+    public function records(): HasMany
+    {
+        return $this->hasMany(ServiceRecord::class)->orderByDesc('performed_on')->orderByDesc('id');
+    }
+
+    /**
+     * @return HasMany<Document, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class)->latest();
+    }
+
+    /**
+     * @return HasMany<OdometerReading, $this>
+     */
+    public function readings(): HasMany
+    {
+        return $this->hasMany(OdometerReading::class)->orderBy('recorded_on')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<Reminder, $this>
+     */
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(Reminder::class)->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<Expense, $this>
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class)->orderByDesc('spent_on')->orderByDesc('id');
+    }
+
+    /**
+     * @return HasMany<Recall, $this>
+     */
+    public function recalls(): HasMany
+    {
+        return $this->hasMany(Recall::class)->orderByDesc('reported_on');
+    }
+
+    /**
+     * @return HasMany<VehiclePhoto, $this>
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(VehiclePhoto::class)->orderBy('position')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<ShareLink, $this>
+     */
+    public function shareLinks(): HasMany
+    {
+        return $this->hasMany(ShareLink::class)->latest();
+    }
+
+    /**
+     * @return HasMany<Listing, $this>
+     */
+    public function listings(): HasMany
+    {
+        return $this->hasMany(Listing::class)->latest();
+    }
+
+    /**
+     * The listing the current owner is working on (draft, live or under offer).
+     *
+     * @return HasOne<Listing, $this>
+     */
+    public function openListing(): HasOne
+    {
+        return $this->hasOne(Listing::class)
+            ->whereIn('status', [ListingStatus::Draft, ListingStatus::Active, ListingStatus::Pending])
+            ->latestOfMany();
+    }
+
+    public function title(): string
+    {
+        return trim("{$this->year} {$this->make} {$this->model}");
+    }
+
+    public function displayName(): string
+    {
+        return $this->nickname ?: $this->title();
+    }
+
+    public function fullTitle(): string
+    {
+        return trim($this->title().' '.$this->trim);
+    }
+
+    /**
+     * Hide the serial number (last six characters) for public views.
+     */
+    public function maskedVin(): string
+    {
+        return substr($this->vin, 0, 11).'••••••';
+    }
+
+    public function coverPhotoUrl(): ?string
+    {
+        $photo = $this->relationLoaded('photos') ? $this->photos->first() : $this->photos()->first();
+
+        return $photo?->url();
+    }
+
+    public function ownerCount(): int
+    {
+        return $this->relationLoaded('ownerships') ? $this->ownerships->count() : $this->ownerships()->count();
+    }
+
+    /**
+     * Recompute the cached mileage from the highest trusted reading.
+     */
+    public function refreshMileage(): void
+    {
+        $this->forceFill(['current_mileage' => (int) $this->readings()->max('reading')])->saveQuietly();
     }
 
     protected static function booted(): void
     {
-        static::creating(function (Vehicle $vehicle) {
-            if (blank($vehicle->slug)) {
-                $vehicle->slug = static::uniqueSlug($vehicle);
-            }
+        static::deleting(function (Vehicle $vehicle) {
+            $vehicle->photos->each->delete();
+            $vehicle->documents()->get()->each->delete();
         });
-
-        static::saving(function (Vehicle $vehicle) {
-            if ($vehicle->isDirty('status')) {
-                $vehicle->sold_at = $vehicle->status === VehicleStatus::Sold ? ($vehicle->sold_at ?? now()) : null;
-            }
-
-            if ($vehicle->exists && $vehicle->isDirty('price')) {
-                $original = (int) $vehicle->getOriginal('price');
-                // Remember the old price only on a drop, so the storefront can show "was $X".
-                $vehicle->previous_price = $vehicle->price < $original ? $original : null;
-            }
-        });
-
-        static::updated(function (Vehicle $vehicle) {
-            if ($vehicle->wasChanged('price') && $vehicle->previous_price && $vehicle->status !== VehicleStatus::Sold) {
-                Notification::send($vehicle->favoritedBy()->get(), new PriceDropped($vehicle));
-            }
-        });
-    }
-
-    protected static function uniqueSlug(Vehicle $vehicle): string
-    {
-        $base = Str::slug(implode(' ', array_filter([
-            $vehicle->year,
-            $vehicle->brand?->name,
-            $vehicle->model,
-            $vehicle->trim,
-        ])));
-
-        $slug = $base;
-        $i = 2;
-        while (static::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$i}";
-            $i++;
-        }
-
-        return $slug;
-    }
-
-    public function getRouteKeyName(): string
-    {
-        return 'slug';
-    }
-
-    /**
-     * @return BelongsTo<Brand, $this>
-     */
-    public function brand(): BelongsTo
-    {
-        return $this->belongsTo(Brand::class);
-    }
-
-    /**
-     * @return HasMany<TestDrive, $this>
-     */
-    public function testDrives(): HasMany
-    {
-        return $this->hasMany(TestDrive::class);
-    }
-
-    /**
-     * @return HasMany<Lead, $this>
-     */
-    public function leads(): HasMany
-    {
-        return $this->hasMany(Lead::class);
-    }
-
-    /**
-     * @return BelongsToMany<User, $this>
-     */
-    public function favoritedBy(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
-    }
-
-    /**
-     * Vehicles that are visible on the storefront (published, including sold cars).
-     */
-    public function scopePublished(Builder $query): void
-    {
-        $query->whereNotNull('published_at')->where('published_at', '<=', now());
-    }
-
-    public function scopeAvailable(Builder $query): void
-    {
-        $query->published()->where('status', VehicleStatus::Available);
-    }
-
-    protected function title(): Attribute
-    {
-        return Attribute::get(fn () => trim("{$this->year} {$this->brand?->name} {$this->model}"));
-    }
-
-    protected function imageUrls(): Attribute
-    {
-        return Attribute::get(function (): array {
-            $urls = collect($this->images ?? [])
-                ->filter()
-                ->map(fn (string $path) => Str::startsWith($path, ['http://', 'https://', '/'])
-                    ? $path
-                    : Storage::disk('public')->url($path))
-                ->values()
-                ->all();
-
-            return $urls ?: [self::PLACEHOLDER_IMAGE];
-        });
-    }
-
-    protected function coverImage(): Attribute
-    {
-        return Attribute::get(fn (): string => $this->image_urls[0]);
-    }
-
-    protected function hasPriceDrop(): Attribute
-    {
-        return Attribute::get(fn (): bool => $this->previous_price !== null && $this->previous_price > $this->price);
-    }
-
-    public function isAvailable(): bool
-    {
-        return $this->status === VehicleStatus::Available;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function toSchemaOrg(): array
-    {
-        return array_filter([
-            '@context' => 'https://schema.org',
-            '@type' => 'Car',
-            'name' => $this->title,
-            'brand' => ['@type' => 'Brand', 'name' => $this->brand?->name],
-            'model' => $this->model,
-            'vehicleModelDate' => (string) $this->year,
-            'bodyType' => $this->body_type?->getLabel(),
-            'color' => $this->exterior_color,
-            'fuelType' => $this->fuel_type?->getLabel(),
-            'vehicleTransmission' => $this->transmission?->getLabel(),
-            'vehicleIdentificationNumber' => $this->vin,
-            'mileageFromOdometer' => ['@type' => 'QuantitativeValue', 'value' => $this->mileage, 'unitCode' => 'SMI'],
-            'image' => $this->image_urls,
-            'description' => $this->description,
-            'offers' => [
-                '@type' => 'Offer',
-                'price' => $this->price,
-                'priceCurrency' => 'USD',
-                'availability' => $this->isAvailable() ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
-            ],
-        ]);
     }
 }

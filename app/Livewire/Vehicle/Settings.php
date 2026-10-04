@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Livewire\Vehicle;
+
+use App\Enums\DealStatus;
+use App\Enums\FuelType;
+use App\Livewire\Concerns\ManagesVehicle;
+use App\Models\Deal;
+use App\Models\Vehicle;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Locked;
+use Livewire\Component;
+
+class Settings extends Component
+{
+    use ManagesVehicle;
+
+    #[Locked]
+    public Vehicle $vehicle;
+
+    public string $nickname = '';
+
+    public string $trim = '';
+
+    public string $exterior_color = '';
+
+    public string $engine = '';
+
+    public string $transmission = '';
+
+    public string $drivetrain = '';
+
+    public string $fuel_type = '';
+
+    public string $confirmVin = '';
+
+    public function mount(): void
+    {
+        foreach (['nickname', 'trim', 'exterior_color', 'engine', 'transmission', 'drivetrain'] as $field) {
+            $this->{$field} = (string) $this->vehicle->{$field};
+        }
+
+        $this->fuel_type = $this->vehicle->fuel_type->value;
+    }
+
+    public function save(): void
+    {
+        $data = $this->validate([
+            'nickname' => ['nullable', 'string', 'max:60'],
+            'trim' => ['nullable', 'string', 'max:120'],
+            'exterior_color' => ['nullable', 'string', 'max:40'],
+            'engine' => ['nullable', 'string', 'max:120'],
+            'transmission' => ['nullable', 'string', 'max:60'],
+            'drivetrain' => ['nullable', 'string', 'max:40'],
+            'fuel_type' => ['required', Rule::enum(FuelType::class)],
+        ]);
+
+        $this->vehicle->update(array_map(fn ($v) => $v === '' ? null : $v, $data));
+        $this->dispatch('toast', message: 'Details saved.');
+    }
+
+    public function delete()
+    {
+        $this->validate(['confirmVin' => ['required', Rule::in([substr($this->vehicle->vin, -6)])]], [
+            'confirmVin.in' => 'Type the last six characters of the VIN to confirm.',
+        ]);
+
+        $busy = Deal::where('vehicle_id', $this->vehicle->getKey())->whereIn('status', [DealStatus::Open, DealStatus::Agreed])->exists();
+
+        if ($busy) {
+            $this->addError('confirmVin', 'Close the open deals on this car first.');
+
+            return null;
+        }
+
+        $this->vehicle->delete();
+        session()->flash('toast', 'Passport deleted.');
+
+        return $this->redirectRoute('garage');
+    }
+
+    public function render()
+    {
+        return view('livewire.vehicle.settings', ['fuels' => FuelType::options()]);
+    }
+}

@@ -1,46 +1,34 @@
-<footer class="mt-24 border-t border-white/5 bg-carbon">
-    <div class="container-x grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-4">
-        <div class="space-y-4">
-            <a href="{{ route('home') }}" class="flex items-center gap-3">
-                <img src="{{ asset('images/bmm-logo.png') }}" alt="" class="h-14 w-14 object-contain">
-                <span class="font-display text-2xl tracking-wider text-white">Beast Mode <span class="text-gold">Motors</span></span>
-            </a>
-            <p class="text-sm leading-relaxed text-mist">Curated exotic, luxury and performance cars. Every vehicle inspected, every price transparent.</p>
+<footer class="no-print mt-24 border-t border-line bg-paper-deep/60">
+    <div class="container-x grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div class="max-w-sm">
+            <x-logo />
+            <p class="mt-4 text-sm leading-relaxed text-ink-soft">The history of a car should belong to the car. Log it as you go, have shops confirm it, and hand it to the next owner when you sell.</p>
         </div>
-
         <div>
-            <h3 class="eyebrow mb-4">Showroom</h3>
+            <p class="eyebrow mb-3">Owners</p>
             <ul class="space-y-2 text-sm">
-                <li><a class="hover:text-gold" href="{{ route('vehicles.index') }}">All inventory</a></li>
-                <li><a class="hover:text-gold" href="{{ route('vehicles.index', ['condition' => 'new']) }}">New arrivals</a></li>
-                <li><a class="hover:text-gold" href="{{ route('vehicles.index', ['body' => 'suv']) }}">Super SUVs</a></li>
-                <li><a class="hover:text-gold" href="{{ route('vehicles.index', ['body' => 'hypercar']) }}">Hypercars</a></li>
-                <li><a class="hover:text-gold" href="{{ route('compare') }}">Compare cars</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('register') }}">Start a passport</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('how-it-works') }}">How it works</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('how-it-works') }}#score">The Passport Score</a></li>
             </ul>
         </div>
-
         <div>
-            <h3 class="eyebrow mb-4">Services</h3>
+            <p class="eyebrow mb-3">Buyers</p>
             <ul class="space-y-2 text-sm">
-                <li><a class="hover:text-gold" href="{{ route('sell') }}">Sell or trade in</a></li>
-                <li><a class="hover:text-gold" href="{{ route('contact', ['topic' => 'finance']) }}">Financing</a></li>
-                <li><a class="hover:text-gold" href="{{ route('brands.index') }}">Brands</a></li>
-                <li><a class="hover:text-gold" href="{{ route('about') }}">About us</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('marketplace') }}">Cars for sale</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('vin-check') }}">Free VIN & recall check</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('safety') }}">Buying & selling safely</a></li>
             </ul>
         </div>
-
-        <div class="space-y-3 text-sm">
-            <h3 class="eyebrow mb-4">Visit</h3>
-            <p>{{ config('dealership.address') }}</p>
-            <p><a class="hover:text-gold" href="tel:{{ preg_replace('/[^+\d]/', '', config('dealership.phone')) }}">{{ config('dealership.phone') }}</a></p>
-            <p><a class="hover:text-gold" href="mailto:{{ config('dealership.email') }}">{{ config('dealership.email') }}</a></p>
-            <p class="text-mist">Mon–Fri 10–7 · Sat 10–5 · Sun closed</p>
+        <div>
+            <p class="eyebrow mb-3">Data</p>
+            <p class="text-sm leading-relaxed text-ink-soft">VIN decoding and recalls come from the U.S. <a class="link" href="https://www.nhtsa.gov/recalls" rel="noopener" target="_blank">NHTSA</a> open data APIs.</p>
         </div>
     </div>
-    <div class="border-t border-white/5">
-        <div class="container-x flex flex-col items-center justify-between gap-2 py-6 text-xs text-mist sm:flex-row">
-            <p>&copy; {{ date('Y') }} {{ config('dealership.name') }}. A portfolio project built with Laravel.</p>
-            <p>Prices exclude taxes, title and registration. Vehicle photos are illustrative.</p>
+    <div class="border-t border-line">
+        <div class="container-x flex flex-col gap-2 py-5 text-xs text-muted sm:flex-row sm:justify-between">
+            <p>&copy; {{ date('Y') }} {{ config('passport.name') }}. We never hold buyers' or sellers' money.</p>
+            <p>Made for people who look after their cars.</p>
         </div>
     </div>
 </footer>

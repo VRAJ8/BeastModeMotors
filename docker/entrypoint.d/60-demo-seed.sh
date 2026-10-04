@@ -3,6 +3,6 @@
 set -e
 
 if [ "${DEMO_MODE:-false}" = "true" ]; then
-    echo "🦁 Beast Mode Motors: seeding demo showroom (if empty)..."
+    echo "🦁 Beast Mode Motors: seeding demo data (if empty)..."
     php /var/www/html/artisan demo:seed --if-empty --no-interaction
 fi

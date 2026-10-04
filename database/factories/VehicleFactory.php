@@ -2,14 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Enums\BodyType;
-use App\Enums\Condition;
-use App\Enums\Drivetrain;
+use App\Enums\AcquiredVia;
 use App\Enums\FuelType;
-use App\Enums\Transmission;
-use App\Enums\VehicleStatus;
-use App\Models\Brand;
+use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\VinDecoder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,47 +14,74 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class VehicleFactory extends Factory
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
         return [
-            'brand_id' => Brand::factory(),
-            'model' => ucfirst(fake()->unique()->word()).' '.fake()->randomElement(['GT', 'S', 'RS', 'Turbo', 'V12']),
-            'year' => fake()->numberBetween(2018, (int) date('Y')),
-            'price' => fake()->numberBetween(80, 600) * 1000,
-            'mileage' => fake()->numberBetween(0, 30000),
-            'body_type' => fake()->randomElement(BodyType::cases()),
-            'condition' => fake()->randomElement(Condition::cases()),
-            'status' => VehicleStatus::Available,
-            'fuel_type' => FuelType::Petrol,
-            'transmission' => Transmission::DualClutch,
-            'drivetrain' => fake()->randomElement(Drivetrain::cases()),
-            'engine' => fake()->randomElement(['4.0L Twin-Turbo V8', '6.5L V12', '3.8L Twin-Turbo Flat-6']),
-            'horsepower' => fake()->numberBetween(400, 1000),
-            'torque' => fake()->numberBetween(350, 800),
-            'zero_to_sixty' => fake()->randomFloat(1, 2.3, 4.5),
-            'top_speed' => fake()->numberBetween(170, 220),
-            'exterior_color' => fake()->safeColorName(),
-            'interior_color' => 'Black',
-            'description' => fake()->paragraph(),
-            'features' => ['Carbon ceramic brakes', 'Launch control'],
-            'images' => [],
-            'is_featured' => false,
-            'published_at' => now()->subDay(),
+            'user_id' => User::factory(),
+            'vin' => self::vin(),
+            'vin_valid' => true,
+            'decode_source' => 'offline',
+            'year' => 2019,
+            'make' => 'Honda',
+            'model' => 'Civic',
+            'trim' => 'EX',
+            'fuel_type' => FuelType::Gasoline,
+            'exterior_color' => 'Blue',
+            'current_mileage' => 30000,
         ];
     }
 
-    public function featured(): static
+    /**
+     * A random VIN with a correct check digit.
+     */
+    public static function vin(string $prefix = '1HGCM82'): string
     {
-        return $this->state(['is_featured' => true]);
+        $chars = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
+        $vin = str_pad($prefix, 8, 'A').'0K';
+
+        while (strlen($vin) < 17) {
+            $vin .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+
+        return app(VinDecoder::class)->withCheckDigit($vin);
     }
 
-    public function sold(): static
+    /**
+     * Give the car a current ownership (and an opening odometer reading), as the app does on registration.
+     */
+    public function configure(): static
     {
-        return $this->state(['status' => VehicleStatus::Sold]);
-    }
+        return $this->afterCreating(function (Vehicle $vehicle) {
+            if ($vehicle->ownerships()->exists()) {
+                return;
+            }
 
-    public function draft(): static
-    {
-        return $this->state(['published_at' => null]);
+            $ownership = $vehicle->ownerships()->create([
+                'user_id' => $vehicle->user_id,
+                'owner_number' => 1,
+                'acquired_via' => AcquiredVia::Dealer,
+                'started_on' => now()->subYears(2)->toDateString(),
+                'start_mileage' => max(0, $vehicle->current_mileage - 20000),
+            ]);
+
+            $vehicle->readings()->create([
+                'ownership_id' => $ownership->getKey(),
+                'reading' => $ownership->start_mileage,
+                'recorded_on' => $ownership->started_on,
+                'source' => 'purchase',
+            ]);
+
+            if ($vehicle->current_mileage > $ownership->start_mileage) {
+                $vehicle->readings()->create([
+                    'ownership_id' => $ownership->getKey(),
+                    'reading' => $vehicle->current_mileage,
+                    'recorded_on' => now()->subWeek()->toDateString(),
+                    'source' => 'manual',
+                ]);
+            }
+        });
     }
 }

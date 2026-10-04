@@ -2,17 +2,17 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Vehicle;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 
 class SeedDemo extends Command
 {
     protected $signature = 'demo:seed
-        {--if-empty : Only seed when the showroom has no vehicles yet}
+        {--if-empty : Only seed when there are no users yet}
         {--fresh : Drop all tables and rebuild the demo from scratch}';
 
-    protected $description = 'Seed the public demo showroom (admin + customer accounts, inventory, activity)';
+    protected $description = 'Seed the public demo (owners, cars with history, listings, deals, admin)';
 
     public function handle(): int
     {
@@ -23,8 +23,8 @@ class SeedDemo extends Command
             return self::SUCCESS;
         }
 
-        if ($this->option('if-empty') && Schema::hasTable('vehicles') && Vehicle::exists()) {
-            $this->components->info('Showroom already seeded, skipping.');
+        if ($this->option('if-empty') && Schema::hasTable('users') && User::exists()) {
+            $this->components->info('Demo already seeded, skipping.');
 
             return self::SUCCESS;
         }

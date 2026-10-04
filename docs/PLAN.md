@@ -1,121 +1,79 @@
-# Beast Mode Motors — Product & Build Plan
+# Beast Mode Motors — Car Passport: product plan
 
-> A full-stack luxury / performance car dealership platform, built 100% on the Laravel ecosystem.
+## Positioning
 
-## 1. Where this came from
+**A car's history should belong to the car.** Beast Mode Motors is a passport for a vehicle. The owner keeps it as they go, the shops that work on the car confirm it, and it transfers to the next owner on sale. The private-sale marketplace and deal room are where the passport pays off. A well-documented car is easier to sell, and a buyer can see exactly how it was looked after.
 
-Two earlier attempts existed:
+### Why this, and why now
+- **History reports cover the wrong data.** They aggregate what insurers, auctions and some dealers report: accidents, title brands, a few odometer readings. They miss the thing that decides whether a used car is good, which is whether it was maintained, especially at independent shops or at home.
+- **Owner apps keep data private.** Maintenance trackers exist, but their logs are self-reported, can't be verified, and die with the owner's account.
+- **Private sales are under-served and scam-prone.** Dealers have tooling. Private sellers have a listings site and their phone.
 
-| Repo | What it was | What we keep |
+The wedge is **shop verification**: a signed link a shop can answer in ten seconds without signing up. It turns an owner's claim into evidence, and it's the one thing a buyer can't get anywhere else.
+
+## Users
+
+| User | Job to be done | Where they live in the app |
 | --- | --- | --- |
-| `BeastModeMotors` | An empty Laravel 11 skeleton (Bootstrap + Tailwind + Breeze in `composer.json`) and the BMM gold-lion logo. | The name, the logo, the Laravel choice. |
-| `beast-mode-wheels-verse` | A Lovable-generated React + Supabase single page: hero carousel, car showcase, about, testimonials, contact form, Supabase auth. Tables: `car_brands`, `cars`, `profiles`, `test_drive_requests`, `contact_inquiries`. | The domain model, the dark "beast" aesthetic (black, silver, red accent, Bebas display type), the section ideas. |
+| Owner | Keep track of the car, never miss maintenance, prove its care when selling | Garage, vehicle tabs, Share, Sell |
+| Buyer | Find a well-documented car, negotiate and complete the purchase safely | Marketplace, listing, deal room |
+| Shop | Confirm their work for a customer with minimal effort | Signed verification page (no account) |
+| Trust & safety staff | Remove bad listings, spot scams and fake verifications | `/admin` |
 
-Gaps in the prototypes: no real inventory browsing, test-drive booking was "coming soon", no admin side at all
-(inventory could only be edited in the Supabase console), no tests, no deployment story, and the work was split across
-two stacks.
-
-**Decision:** start a single new Laravel 12 project from scratch, keep the best ideas, and design it as a product a
-real dealership could run — a public showroom, a customer account area, and a back-office for staff.
-
-## 2. Tech stack (Laravel only)
-
-| Concern | Choice | Why |
-| --- | --- | --- |
-| Framework | Laravel 12, PHP 8.3 | Latest LTS-style release, enums, readonly props. |
-| Interactive UI | Livewire 4 + Alpine (bundled) | SPA-like filters, booking and compare with zero custom JS build complexity. |
-| Styling | Tailwind CSS 4 (CSS-first `@theme`) | Design tokens live in `resources/css/app.css`. |
-| Admin back-office | Filament 5 | Production-grade CRUD, tables, widgets, actions — all PHP. |
-| Auth | Laravel Breeze (Blade), restyled | Login, register, reset, email verification, profile. |
-| DB | SQLite locally / PostgreSQL in production | Zero-setup dev, robust prod. Migrations are portable. |
-| Queue / notifications | Database queue, Mail + database channels | No Redis needed to deploy, upgradeable later. |
-| Tests | Pest 3 | Feature tests for every user-facing rule. |
-| Quality | Laravel Pint, GitHub Actions CI | Lint + tests + asset build on every push. |
-| Deploy | Docker image (Nginx + PHP-FPM) → Render / Railway / Fly; Laravel Cloud works out of the box | One-click portfolio demo. |
-
-## 3. Personas
-
-1. **Visitor / buyer** — browses, compares, finances, books a test drive, makes an offer, gets a trade-in estimate.
-2. **Registered customer** — everything above, plus a "My Garage": saved cars, price-drop alerts, booking history.
-3. **Sales staff / admin** — manages inventory, brands, test-drive calendar, a lead pipeline, testimonials, users.
-
-## 4. Feature set
-
-### Public showroom
-- **Home** — cinematic hero rotating featured cars, live stats (cars in stock, brands, horsepower on the floor),
-  featured inventory, shop-by-brand and shop-by-body-type, "why Beast Mode", testimonials, CTA.
-- **Inventory** (Livewire) — keyword search, filters (brand, body type, condition, price range, year range, min HP),
-  sort (newest, price ↑↓, horsepower, mileage), pagination; filters sync to the URL so searches are shareable.
-- **Vehicle page** — gallery with lightbox, key specs, performance bars (0–60, top speed, HP, torque), feature list,
-  similar vehicles, `schema.org/Car` JSON-LD for SEO, view counter, "price dropped" badge.
-  - **Finance calculator** (Alpine) — price, deposit, APR, term → monthly payment and total cost.
-  - **Book a test drive** (Livewire) — date picker + real time slots; slots already taken for that car disappear;
-    business-hours / Sunday-closed rules; reference code issued.
-  - **Make an offer** — creates an `offer` lead with amount.
-  - **Save** (heart) and **Compare** toggles.
-- **Compare** — up to 3 cars side by side; best value in each row highlighted.
-- **Sell / Trade-in** — form with an *indicative* instant estimate (age + mileage depreciation model), creates a
-  `trade_in` lead for staff follow-up.
-- **Brands** — index + brand page with its inventory.
-- **About / Contact** — contact form → `general` lead.
-- **SEO** — slugs, meta + Open Graph tags, `sitemap.xml`, `robots.txt`.
-
-### Customer area ("My Garage")
-- Saved vehicles with current price and status (sold cars greyed out).
-- Price-drop alerts: when staff lower a price, everyone who saved that car gets a mail + in-app notification.
-- Test drives: upcoming / past, cancel an upcoming booking.
-- My enquiries & offers with status.
-- Profile, password, delete account (Breeze).
-
-### Back-office (`/admin`, Filament, admins only)
-- **Dashboard** — stock value, available cars, new leads this month, upcoming test drives; leads-per-week chart;
-  latest leads table.
-- **Vehicles** — full CRUD, image uploads, status (available / reserved / sold), featured toggle, quick "mark sold".
-- **Brands**, **Testimonials**, **Users** (admin flag).
-- **Test drives** — confirm / complete / cancel actions, filter by status & date; customers are emailed on change.
-- **Leads** — a pipeline (new → contacted → qualified → won / lost) across general, vehicle, finance, offer and
-  trade-in leads.
-
-### Non-functional
-- Rate limiting + honeypot on public forms.
-- Authorization: `is_admin` gate for Filament (`FilamentUser`), policies for customer-owned records.
-- Money stored as integer dollars; enums for every status; eager loading to avoid N+1.
-- Responsive, dark, accessible (focus states, alt text, labels).
-
-## 5. Data model
+## Data model
 
 ```
-users          id, name, email, phone, is_admin, password, ...
-brands         id, name, slug, country, founded_year, logo_url, description
-vehicles       id, brand_id, model, trim, slug, year, price, previous_price, mileage,
-               body_type, condition, status, fuel_type, transmission, drivetrain,
-               engine, horsepower, torque, zero_to_sixty, top_speed,
-               exterior_color, interior_color, vin, description, features(json),
-               images(json), is_featured, views, published_at, sold_at
-favorites      user_id, vehicle_id                      (pivot)
-test_drives    id, reference, vehicle_id, user_id?, name, email, phone,
-               scheduled_at, status, notes
-leads          id, type, status, vehicle_id?, user_id?, name, email, phone,
-               message, offer_amount, meta(json)
-testimonials   id, name, title, quote, rating, vehicle, is_published
-notifications  (Laravel database notifications)
+User ─┬─< Vehicle (current owner) ─┬─< Ownership (Owner 1, 2, …)   ← the chain of custody
+      │                            ├─< ServiceRecord ─┬─< Document (receipts)
+      │                            │                  ├─< ShopVerification (signed-link answers)
+      │                            │                  └── OdometerReading (1:1, kept in sync)
+      │                            ├─< OdometerReading (purchase, manual, sale…)
+      │                            ├─< Reminder (miles / months intervals)
+      │                            ├─< Expense (per ownership — private)
+      │                            ├─< Recall (NHTSA campaigns, resolved by a record)
+      │                            ├─< Document (title, insurance… — private)
+      │                            ├─< VehiclePhoto
+      │                            ├─< ShareLink (per-link privacy, expiry, views)
+      │                            └─< Listing ─┬─< Deal ─┬─< DealMessage (scam flags)
+      │                                         │         ├─< Offer (counter chain)
+      │                                         │         └── Inspection (checklist results)
+      │                                         └─< Report
+      └─< saved_listings
 ```
 
-## 6. Build phases
+Key rules:
+- **Evidence levels:** shop verified > receipt attached > self-reported; disputed records count for nothing. Records logged more than 30 days after the work count for less, unless verified.
+- **A verified record is locked.** Its date, mileage, cost and work can't be edited afterwards.
+- **Transfer rules:** records, receipts, inspection reports, warranties, manuals, photos, readings, recalls and reminders go with the car. Expenses, title, registration and insurance scans, and share links stay behind or are deleted.
+- **Exactly one agreed deal per listing.** Accepting an offer locks the listing row and marks it pending. Cancelling an agreed deal puts the car back on the market.
 
-1. **Foundation** — fresh Laravel 12, Tailwind 4 theme, Breeze, Livewire, Filament, Pest.
-2. **Domain** — enums, migrations, models, factories, rich seeders (real exotic line-up).
-3. **Showroom** — layouts, home, inventory, vehicle page, compare, brands, sell, contact, SEO.
-4. **Customer** — favorites, garage dashboard, bookings, price-drop notifications.
-5. **Back-office** — Filament resources, actions, dashboard widgets.
-6. **Quality** — Pest feature tests, Pint, GitHub Actions.
-7. **Ship** — Dockerfile, `render.yaml`, README with screenshots and demo credentials.
+## Passport Score
 
-## 7. Stretch ideas (post-v1)
+| Component | Max | Measure |
+| --- | --- | --- |
+| Identity | 15 | VIN passes check digit (10), has photos (5) |
+| History coverage | 25 | Share of documented years (up to 10) with at least one record |
+| Quality of evidence | 30 | Average record weight: verified 1.0, receipt 0.7, self 0.3, disputed 0; ×0.6 if logged later and not verified |
+| Odometer integrity | 15 | No backwards readings (10), a reading within 6 months (5) |
+| Upkeep & recalls | 15 | No overdue maintenance (8, −3 per overdue item), no open recalls (7) |
 
-- Stripe deposit to reserve a car (Laravel Cashier).
-- Meilisearch via Laravel Scout for typo-tolerant search.
-- Real-time "someone is viewing this car" with Laravel Reverb.
-- Multi-language (EN / HI) and multi-currency display.
-- AI-written listing descriptions from spec sheets.
-- PDF spec sheet / invoice export.
+Grades: A ≥ 85, B ≥ 70, C ≥ 50, D below 50.
+
+## Shipped in v1
+- Garage: VIN decode with offline fallback, records with receipts and line items, maintenance plans, documents with expiry, costs and fuel economy, recalls, share links, PDF report, QR window sign.
+- Shop verification by signed link, with confirm/dispute, record locking and owner notifications.
+- Marketplace with score-first sorting and filters. Listings require a valid VIN, a photo and at least one record.
+- Deal room: messages with scam shield, offers and counters, inspection checklist, per-role handover checklist, bill of sale, two-sided confirmation, ownership transfer.
+- Scheduled jobs: daily reminders and expiry alerts, weekly recall sync, hourly expiry of offers and verification links.
+- Trust & safety console.
+- 131 Pest tests, CI, Docker image, Render blueprint, seeded demo world.
+
+## Roadmap
+1. **Shop profiles.** Shops that verify often get a public page and a "verifies within 24h" badge; owners can pick a shop from a directory instead of typing an email.
+2. **Receipt OCR.** Upload a photo and the date, mileage, line items and shop are filled in for you.
+3. **Telematics and OBD readings.** Odometer readings from connected-car APIs (Smartcar) or a Bluetooth OBD dongle, tagged as device-sourced.
+4. **Market value.** Price guidance from comparable sales on the platform, adjusted for Passport Score, to show what documentation is worth.
+5. **Verified identity for sellers** (ID plus selfie) and a "met in person" confirmation in the deal room.
+6. **State paperwork packs.** State-specific bill of sale and odometer disclosure forms.
+7. **Insurer and warranty partnerships.** Share a passport to get a quote; extended-warranty providers accept verified maintenance as proof.
+8. **Native mobile app** for logging fuel and services at the pump or the counter.
