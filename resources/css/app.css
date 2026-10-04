@@ -1,3 +1,113 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import '@fontsource/bebas-neue/400.css';
+@import '@fontsource-variable/inter';
+@plugin '@tailwindcss/forms';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Bebas Neue', 'Oswald', ui-sans-serif, sans-serif;
+
+    --color-ink: #0a0a0a;
+    --color-carbon: #121212;
+    --color-graphite: #1c1c1c;
+    --color-steel: #2a2a2a;
+    --color-silver: #c0c0c0;
+    --color-mist: #8a8a8a;
+    --color-gold: #d4a857;
+    --color-gold-light: #ecc879;
+    --color-gold-dark: #a67c2e;
+    --color-ember: #c70039;
+
+    --animate-fade-up: fade-up 0.7s ease-out both;
+    --animate-ken-burns: ken-burns 12s ease-out both;
+
+    @keyframes fade-up {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes ken-burns {
+        from { transform: scale(1.12); }
+        to { transform: scale(1); }
+    }
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+        color-scheme: dark;
+    }
+
+    body {
+        @apply bg-ink font-sans text-silver antialiased;
+    }
+
+    ::selection {
+        @apply bg-gold text-ink;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+}
+
+@utility container-x {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+@utility heading-display {
+    @apply font-display tracking-wide text-white uppercase;
+}
+
+@utility text-gold-gradient {
+    @apply bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent;
+}
+
+@utility eyebrow {
+    @apply text-xs font-semibold tracking-[0.3em] text-gold uppercase;
+}
+
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-semibold tracking-wide uppercase transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-gold {
+    @apply btn bg-gold text-ink hover:bg-gold-light;
+}
+
+@utility btn-outline {
+    @apply btn border border-steel text-white hover:border-gold hover:text-gold;
+}
+
+@utility btn-ghost {
+    @apply btn px-3 text-silver hover:text-gold;
+}
+
+@utility card {
+    @apply rounded-xl border border-white/5 bg-carbon;
+}
+
+@utility input {
+    @apply block w-full rounded-md border-steel bg-graphite text-white placeholder:text-mist/70 focus:border-gold focus:ring-gold;
+}
+
+@utility label {
+    @apply mb-1.5 block text-xs font-semibold tracking-wider text-mist uppercase;
+}
+
+@utility chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-steel px-3 py-1 text-xs font-medium text-silver;
+}
+
+@utility badge {
+    @apply inline-flex items-center rounded px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase;
+}
+
+@utility link-gold {
+    @apply text-gold underline-offset-4 hover:underline;
+}
