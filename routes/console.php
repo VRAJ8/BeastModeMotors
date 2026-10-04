@@ -1,8 +1,10 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Keep the public demo tidy: rebuild it every night.
+Schedule::command('demo:seed --fresh')
+    ->dailyAt('04:00')
+    ->when(fn () => config('dealership.demo'));
+
+Schedule::command('queue:prune-failed --hours=168')->daily();

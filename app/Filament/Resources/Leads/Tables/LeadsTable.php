@@ -43,7 +43,7 @@ class LeadsTable
                         : null)
                     ->placeholder('—')
                     ->sortable(),
-                TextColumn::make('message')->limit(50)->toggleable()->placeholder('—'),
+                TextColumn::make('message')->limit(50)->toggleable(isToggledHiddenByDefault: true)->placeholder('—'),
                 SelectColumn::make('status')
                     ->options(LeadStatus::class)
                     ->selectablePlaceholder(false)

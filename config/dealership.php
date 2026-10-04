@@ -19,6 +19,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demo mode
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, sign-in screens show the demo credentials and the database
+    | is rebuilt nightly so visitors can play with the back-office freely.
+    |
+    */
+
+    'demo' => (bool) env('DEMO_MODE', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Test drives
     |--------------------------------------------------------------------------
     |

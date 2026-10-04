@@ -57,7 +57,7 @@ class ActivitySeeder extends Seeder
         // ~10 weeks of leads for the dashboard chart.
         foreach (range(1, 60) as $i) {
             $type = fake()->randomElement(LeadType::cases());
-            $vehicle = $type === LeadType::General ? null : $vehicles->random();
+            $vehicle = in_array($type, [LeadType::General, LeadType::TradeIn], true) ? null : $vehicles->random();
 
             Lead::factory()->create([
                 'type' => $type,

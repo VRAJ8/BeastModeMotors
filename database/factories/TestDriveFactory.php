@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\TestDriveStatus;
+use App\Models\TestDrive;
 use App\Models\Vehicle;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\TestDrive>
+ * @extends Factory<TestDrive>
  */
 class TestDriveFactory extends Factory
 {

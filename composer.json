@@ -1,22 +1,25 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "vraj8/beast-mode-motors",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Beast Mode Motors — a luxury & performance car dealership platform built with Laravel, Livewire and Filament.",
     "keywords": [
         "laravel",
-        "framework"
+        "livewire",
+        "filament",
+        "dealership",
+        "cars"
     ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "fakerphp/faker": "^1.23",
         "filament/filament": "^5.9",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^4.4"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.23",
         "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
@@ -46,7 +49,9 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
+            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
+            "@php artisan demo:seed --if-empty",
+            "@php artisan storage:link --force",
             "npm install",
             "npm run build"
         ],

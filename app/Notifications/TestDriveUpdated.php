@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Enums\TestDriveStatus;
 use App\Models\TestDrive;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -23,7 +24,7 @@ class TestDriveUpdated extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return $notifiable instanceof \App\Models\User ? ['mail', 'database'] : ['mail'];
+        return $notifiable instanceof User ? ['mail', 'database'] : ['mail'];
     }
 
     public function toMail(object $notifiable): MailMessage

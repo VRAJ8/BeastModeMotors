@@ -9,10 +9,11 @@ use App\Enums\FuelType;
 use App\Enums\Transmission;
 use App\Enums\VehicleStatus;
 use App\Models\Brand;
+use App\Models\Vehicle;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Vehicle>
+ * @extends Factory<Vehicle>
  */
 class VehicleFactory extends Factory
 {

@@ -1,0 +1,32 @@
+# One-click demo deploy on Render: https://render.com/deploy
+# Runs as a self-contained demo (SQLite, re-seeded on every fresh boot).
+# For a persistent production setup, add a Postgres database and set DB_* vars.
+services:
+  - type: web
+    name: beast-mode-motors
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Beast Mode Motors
+      - key: APP_KEY
+        sync: false # paste the output of: php artisan key:generate --show
+      - key: APP_URL
+        sync: false # e.g. https://beast-mode-motors.onrender.com
+      - key: PORT
+        value: "8080"
+      - key: DEMO_MODE
+        value: "true"
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: MAIL_MAILER
+        value: log
+      - key: APP_TIMEZONE
+        value: America/New_York
