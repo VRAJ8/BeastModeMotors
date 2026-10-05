@@ -62,6 +62,22 @@ return [
     */
 
     'backfill_days' => 30,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Storage
+    |--------------------------------------------------------------------------
+    |
+    | Receipts and paperwork are private (streamed through authorised routes);
+    | car photos are public. Point these at "s3" / "s3-public" in production
+    | (works with AWS S3, Cloudflare R2 and other S3-compatible stores).
+    |
+    */
+
+    'disks' => [
+        'documents' => env('DOCUMENTS_DISK', 'local'),
+        'photos' => env('PHOTOS_DISK', 'public'),
+    ],
     'max_upload_kb' => 10240,
 
     /*

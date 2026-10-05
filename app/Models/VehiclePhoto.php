@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -20,14 +21,19 @@ class VehiclePhoto extends Model
 
     public function url(): string
     {
-        return str_starts_with($this->path, 'http') ? $this->path : Storage::disk('public')->url($this->path);
+        return str_starts_with($this->path, 'http') ? $this->path : static::disk()->url($this->path);
+    }
+
+    public static function disk(): Filesystem
+    {
+        return Storage::disk(config('passport.disks.photos'));
     }
 
     protected static function booted(): void
     {
         static::deleted(function (VehiclePhoto $photo) {
             if (! str_starts_with($photo->path, 'http')) {
-                Storage::disk('public')->delete($photo->path);
+                static::disk()->delete($photo->path);
             }
         });
     }

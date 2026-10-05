@@ -60,6 +60,23 @@ return [
             'report' => false,
         ],
 
+        // Same bucket, public objects (car photos). AWS_PUBLIC_URL is the bucket's public base URL,
+        // e.g. an R2 r2.dev or custom domain.
+        's3-public' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'url' => env('AWS_PUBLIC_URL', env('AWS_URL')),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'root' => 'public',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

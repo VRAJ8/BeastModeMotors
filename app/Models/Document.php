@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentType;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -77,8 +78,13 @@ class Document extends Model
         };
     }
 
+    public static function disk(): Filesystem
+    {
+        return Storage::disk(config('passport.disks.documents'));
+    }
+
     protected static function booted(): void
     {
-        static::deleted(fn (Document $document) => Storage::disk('local')->delete($document->path));
+        static::deleted(fn (Document $document) => static::disk()->delete($document->path));
     }
 }

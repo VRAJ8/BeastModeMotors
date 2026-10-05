@@ -66,10 +66,11 @@ class Marketplace extends Component
                     ->when($this->minYear !== '', fn ($q) => $q->where('year', '>=', (int) $this->minYear))
                     ->when(trim($this->q) !== '', function ($q) {
                         foreach (preg_split('/\s+/', trim($this->q)) as $term) {
-                            $q->where(fn ($w) => $w->where('make', 'like', "%{$term}%")
-                                ->orWhere('model', 'like', "%{$term}%")
-                                ->orWhere('trim', 'like', "%{$term}%")
-                                ->orWhere('year', $term));
+                            // whereLike is case-insensitive on every database (ILIKE on Postgres).
+                            $q->where(fn ($w) => $w->whereLike('make', "%{$term}%")
+                                ->orWhereLike('model', "%{$term}%")
+                                ->orWhereLike('trim', "%{$term}%")
+                                ->when(ctype_digit($term), fn ($y) => $y->orWhere('year', (int) $term)));
                         }
                     });
             })

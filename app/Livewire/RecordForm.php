@@ -227,7 +227,7 @@ class RecordForm extends Component
                 'uploaded_by' => Auth::id(),
                 'type' => DocumentType::Receipt,
                 'name' => str($file->getClientOriginalName())->beforeLast('.')->limit(150)->toString() ?: 'Receipt',
-                'path' => $file->store("vehicles/{$this->vehicle->getKey()}/documents", 'local'),
+                'path' => $file->store("vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
                 'mime' => $file->getMimeType(),
                 'size' => $file->getSize(),
             ]);

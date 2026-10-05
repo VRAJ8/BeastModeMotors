@@ -35,7 +35,7 @@ class ListingResource extends Resource
                 TextColumn::make('vehicle.model')->label('Car')
                     ->formatStateUsing(fn (Listing $record) => $record->vehicle->title())
                     ->description(fn (Listing $record) => $record->vehicle->vin)
-                    ->searchable(query: fn (Builder $query, string $search) => $query->whereHas('vehicle', fn ($v) => $v->where('vin', 'like', "%{$search}%")->orWhere('make', 'like', "%{$search}%")->orWhere('model', 'like', "%{$search}%"))),
+                    ->searchable(query: fn (Builder $query, string $search) => $query->whereHas('vehicle', fn ($v) => $v->whereLike('vin', "%{$search}%")->orWhereLike('make', "%{$search}%")->orWhereLike('model', "%{$search}%"))),
                 TextColumn::make('seller.name')->description(fn (Listing $record) => $record->seller->email)->searchable(),
                 TextColumn::make('price_cents')->label('Price')->formatStateUsing(fn ($state) => money($state))->sortable(),
                 TextColumn::make('score')->label('Score')->badge()->color(fn (int $state) => $state >= 85 ? 'success' : ($state >= 50 ? 'warning' : 'danger'))->sortable(),

@@ -59,7 +59,7 @@ class Sell extends Component
 
         foreach ($this->photos as $photo) {
             $this->vehicle->photos()->create([
-                'path' => $photo->store("vehicles/{$this->vehicle->getKey()}/photos", 'public'),
+                'path' => $photo->store("vehicles/{$this->vehicle->getKey()}/photos", config('passport.disks.photos')),
                 'position' => ++$position,
             ]);
         }

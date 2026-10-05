@@ -15,11 +15,13 @@ use App\Enums\ReportReason;
 use App\Enums\ServiceCategory;
 use App\Enums\VerificationStatus;
 use App\Models\Deal;
+use App\Models\Document;
 use App\Models\Listing;
 use App\Models\Ownership;
 use App\Models\ServiceRecord;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehiclePhoto;
 use App\Notifications\VerificationAnswered;
 use App\Services\ListingPublisher;
 use App\Services\MaintenancePlanner;
@@ -30,7 +32,6 @@ use App\Support\CarIllustration;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * A believable little world: owners with multi-year histories, cars for sale, and deals in every state.
@@ -238,7 +239,7 @@ class DemoSeeder extends Seeder
         ]);
 
         $path = "vehicles/{$vehicle->id}/photos/studio.svg";
-        Storage::disk('public')->put($path, CarIllustration::svg($spec['shape'], $spec['color']));
+        VehiclePhoto::disk()->put($path, CarIllustration::svg($spec['shape'], $spec['color']));
         $vehicle->photos()->create(['path' => $path, 'position' => 0]);
 
         $this->planner->createDefaults($vehicle, $spec['fuel']);
@@ -405,7 +406,7 @@ class DemoSeeder extends Seeder
     private function receipt(Vehicle $vehicle, ServiceRecord $record, string $provider): void
     {
         $path = "vehicles/{$vehicle->id}/documents/receipt-{$record->id}.pdf";
-        Storage::disk('local')->put($path, $this->invoicePdf($provider, $record));
+        Document::disk()->put($path, $this->invoicePdf($provider, $record));
 
         $record->documents()->create([
             'vehicle_id' => $vehicle->id,
@@ -415,7 +416,7 @@ class DemoSeeder extends Seeder
             'name' => 'Invoice '.$record->performed_on->format('Y-m-d').' '.$provider,
             'path' => $path,
             'mime' => 'application/pdf',
-            'size' => Storage::disk('local')->size($path),
+            'size' => Document::disk()->size($path),
             'created_at' => $record->created_at,
         ]);
     }
@@ -492,12 +493,12 @@ class DemoSeeder extends Seeder
             [$tesla, DocumentType::Registration, 'Florida registration', now()->addMonths(7)],
         ] as [$vehicle, $type, $name, $expires]) {
             $path = "vehicles/{$vehicle->id}/documents/".str($name)->slug().'.pdf';
-            Storage::disk('local')->put($path, $this->invoicePdf($name, $vehicle->records()->first()));
+            Document::disk()->put($path, $this->invoicePdf($name, $vehicle->records()->first()));
             $vehicle->documents()->create([
                 'ownership_id' => $vehicle->currentOwnership->id,
                 'uploaded_by' => $vehicle->user_id,
                 'type' => $type, 'name' => $name, 'path' => $path, 'mime' => 'application/pdf',
-                'size' => Storage::disk('local')->size($path), 'expires_on' => $expires,
+                'size' => Document::disk()->size($path), 'expires_on' => $expires,
             ]);
         }
     }

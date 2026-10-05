@@ -47,7 +47,7 @@ class Documents extends Component
             'uploaded_by' => Auth::id(),
             'type' => $this->type,
             'name' => $this->name,
-            'path' => $this->file->store("vehicles/{$this->vehicle->getKey()}/documents", 'local'),
+            'path' => $this->file->store("vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
             'mime' => $this->file->getMimeType(),
             'size' => $this->file->getSize(),
             'expires_on' => $this->expires_on ?: null,
