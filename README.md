@@ -11,10 +11,12 @@
   <img alt="Filament 5" src="https://img.shields.io/badge/Filament-5-FDAE4B">
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white">
   <img alt="PHP 8.3" src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-131_passing-2ea44f">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-146_passing-2ea44f">
 </p>
 
-![Home page](docs/screenshots/home.png)
+![A complete private sale: offer, inspection, handover, and the passport moving to the buyer's garage](docs/screenshots/sale-flow.gif)
+
+<p align="center"><em>A real sale recorded in the app: the buyer accepts the counter-offer, records the inspection, both sides tick the handover checklist, and the passport moves to the buyer's garage.</em></p>
 
 ## The problem
 
@@ -33,6 +35,7 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 - **Add a car by VIN.** The check digit is validated (it catches typos and many forged VINs). The car is decoded from NHTSA's vPIC database, falling back to an offline decoder if that's unreachable. Open safety recalls are pulled, and a maintenance plan is created, with a separate schedule for EVs.
 - **Log work with evidence.** Each record has line items, receipts (PDF or photo), who did it and which maintenance items it covered. Every record is also an odometer reading.
 - **Shop verification.** One tap emails the shop a signed link that expires in 14 days. The shop confirms or disputes the record without creating an account. Confirmed records get a stamp and their facts are locked, so the confirmation stays meaningful.
+- **Shop profiles and directory.** A shop gets a public profile once it confirms its first record. The profile shows records confirmed, cars worked on, response rate, typical answer time and a "usually answers within a day" badge. Shops complete their profile through a signed link; owners pick a listed shop instead of typing an email, and never see the shop's address.
 - **Integrity signals.** Odometer readings that go backwards are flagged. Records entered more than 30 days after the work are labelled "logged later". Entering a lower reading needs explicit confirmation.
 - **The Passport Score (0–100).** It measures how well the history is *evidenced*, not how much was spent. It covers identity, history coverage, quality of evidence, odometer integrity, and upkeep and recalls. The breakdown is always visible, with tips on how to improve it.
 - **Maintenance reminders** by mileage or time, whichever comes first. **Expiry alerts** for registration, insurance and warranties. **Weekly recall checks.** All are sent by email and in-app.
@@ -47,11 +50,11 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
   - A **handover checklist** where each person ticks only their own steps.
   - A generated **bill of sale** (PDF).
 - **Scam shield.** Messages mentioning gift cards, wire transfers, fake escrow or shipping agents, "deployed overseas", verification codes or overpayment get flagged to the recipient with plain-English advice.
-- **Ownership transfer.** When both people confirm the handover, the passport moves to the buyer's garage as Owner N. What travels with the car and what stays private:
+- **Ownership transfer.** When both people confirm the handover, the passport moves to the buyer's garage as Owner N. Earlier owners' records become read-only, so a new owner can't rewrite the car's past. What travels with the car and what stays private:
 
   | Travels with the car | Stays with the seller |
   | --- | --- |
-  | Service records and shop verifications | Running costs |
+  | Service records and shop verifications | Running costs and what each service cost |
   | Receipts, inspection reports, warranties, photos | Title, registration and insurance scans |
   | Odometer history, recalls, maintenance plan | Share links (revoked) |
 
@@ -63,6 +66,7 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 - **Reports:** a review queue for listing reports.
 - **Deals:** filter to those with flagged messages.
 - **Shop verifications:** flags a "shop" email on the owner's own domain, a self-verification red flag.
+- **Shops:** hide a shop from the directory or correct its details.
 - **Cars and users.**
 
 ## Screenshots
@@ -79,9 +83,13 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 | --- | --- |
 | ![Shop verification](docs/screenshots/shop-verification.png) | ![Admin](docs/screenshots/admin.png) |
 
-| Marketplace | Service history | Free VIN check |
+| Marketplace | Shop directory | Free VIN check |
 | --- | --- | --- |
-| ![Marketplace](docs/screenshots/marketplace.png) | ![History](docs/screenshots/history.png) | ![VIN check](docs/screenshots/vin-check.png) |
+| ![Marketplace](docs/screenshots/marketplace.png) | ![Shops](docs/screenshots/shops.png) | ![VIN check](docs/screenshots/vin-check.png) |
+
+| Home | Service history |
+| --- | --- |
+| ![Home](docs/screenshots/home.png) | ![History](docs/screenshots/history.png) |
 
 <p align="center"><img src="docs/screenshots/mobile-listing.png" alt="Mobile listing" width="300"></p>
 
@@ -107,9 +115,10 @@ Run it locally (below) or deploy it. Every account's password is `password`:
 | Styling | Tailwind CSS 4 with design tokens; self-hosted Bricolage Grotesque, Inter and JetBrains Mono |
 | Documents | DomPDF (passport report, bill of sale), BaconQrCode (window sign) |
 | Data | NHTSA vPIC (VIN decoding) and Recalls APIs, both free and keyless |
-| Database | SQLite (dev/demo); PostgreSQL or MySQL in production |
-| Testing | Pest 3 with Livewire and Filament test helpers (131 tests) |
-| Delivery | GitHub Actions (Pint, Pest on PHP 8.3 and 8.4, Docker build), Docker (Nginx + PHP-FPM), Render blueprint |
+| Database | SQLite (dev/demo); PostgreSQL in production — CI runs the full suite on both |
+| Storage | Local disks in development; S3 or Cloudflare R2 in production |
+| Testing | Pest 3 with Livewire and Filament test helpers (146 tests) |
+| Delivery | GitHub Actions (Pint, Pest on PHP 8.3 and 8.4 and on PostgreSQL, Docker build), Docker (Nginx + PHP-FPM), Render blueprint |
 
 ## Getting started
 
@@ -131,7 +140,7 @@ php artisan demo:seed --fresh          # rebuild the demo
 php artisan passport:send-reminders    # maintenance & document-expiry emails (daily)
 php artisan passport:sync-recalls      # NHTSA recall check (weekly)
 php artisan passport:housekeeping      # expire stale offers and verification links (hourly)
-php artisan test                       # 131 tests
+php artisan test                       # 146 tests
 vendor/bin/pint --test                 # code style
 ```
 
@@ -142,7 +151,18 @@ vendor/bin/pint --test                 # code style
 2. Set `APP_KEY` (from `php artisan key:generate --show`) and `APP_URL` (your Render URL).
 3. Deploy. On first boot the container migrates and seeds the demo (`DEMO_MODE=true`).
 
-The free plan has no persistent disk, so the demo resets on restart. For a real install, add PostgreSQL (`DB_CONNECTION=pgsql` plus the `DB_*` variables), point the `local` and `public` disks at S3, and configure a mailer.
+The free plan has no persistent disk, so the demo resets on restart.
+
+### Production checklist
+Everything is configured through environment variables (see [`.env.example`](.env.example) and the notes at the end of [`render.yaml`](render.yaml)):
+
+| Need | Setting |
+| --- | --- |
+| Persistent database | `DB_CONNECTION=pgsql` and `DB_URL` (e.g. Render PostgreSQL) |
+| Receipts & photos that survive deploys | `DOCUMENTS_DISK=s3`, `PHOTOS_DISK=s3-public` and the `AWS_*` keys (S3 or Cloudflare R2; set `AWS_ENDPOINT` and `AWS_PUBLIC_URL` for R2) |
+| Real email (shop verification needs it) | Any SMTP provider, e.g. Resend: `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.resend.com`, `MAIL_PORT=465`, `MAIL_SCHEME=smtps`, `MAIL_USERNAME=resend`, `MAIL_PASSWORD=<api key>` |
+| Reminders and recall checks | Run `php artisan schedule:run` every minute (a Render Cron Job using the same image) |
+| Turn off the demo | `DEMO_MODE=false` |
 
 ### Any Docker host
 
@@ -175,7 +195,7 @@ app/
 ├── Filament/             # Trust & safety console: resources and dashboard widgets
 ├── Http/Controllers/     # Garage, Vehicle tabs, Marketplace, Passport, Deal, ShopVerification, …
 ├── Livewire/             # AddVehicle, RecordForm, Vehicle/* tabs, Marketplace, DealRoom, VinCheck, …
-├── Models/               # Vehicle, Ownership, ServiceRecord, Document, OdometerReading, Listing, Deal, Offer, …
+├── Models/               # Vehicle, Ownership, ServiceRecord, Document, OdometerReading, Shop, Listing, Deal, Offer, …
 ├── Notifications/        # VerifyServiceRecord, VerificationAnswered, MaintenanceDue, RecallsFound, DealUpdate, …
 ├── Policies/             # VehiclePolicy, DealPolicy
 ├── Services/             # VinDecoder, Nhtsa, PassportScore, ScamShield, DealFlow, OwnershipTransfer, …

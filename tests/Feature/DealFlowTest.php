@@ -5,6 +5,8 @@ use App\Enums\DealStatus;
 use App\Enums\ListingStatus;
 use App\Enums\OfferStatus;
 use App\Livewire\DealRoom;
+use App\Livewire\RecordForm;
+use App\Livewire\Vehicle\History;
 use App\Models\Deal;
 use App\Models\Expense;
 use App\Models\ServiceRecord;
@@ -165,6 +167,33 @@ it('transfers the passport, and only the passport, when both sides confirm', fun
     $this->actingAs($deal->buyer)->get(route('vehicles.history', $vehicle))->assertOk();
     $this->actingAs($deal->buyer)->get(route('vehicles.costs', $vehicle))->assertOk()->assertDontSee('$50.00');
     $this->actingAs($seller)->get(route('vehicles.show', $vehicle))->assertForbidden();
+});
+
+it('keeps earlier owners\' records read-only and their costs private', function () {
+    $deal = agreedDeal();
+    $vehicle = $deal->vehicle;
+    $old = ServiceRecord::factory()->create(['vehicle_id' => $vehicle->id, 'mileage' => 29000, 'cost_cents' => 123456, 'title' => 'Clutch by the old owner']);
+
+    tickAll($deal);
+    $this->flow->confirm($deal->fresh(), $deal->seller, 30500);
+    $this->flow->confirm($deal->fresh(), $deal->buyer);
+    $buyer = $deal->buyer;
+    $vehicle->refresh();
+
+    $this->actingAs($buyer)->get(route('vehicles.history', $vehicle))
+        ->assertSee('Clutch by the old owner')->assertSee('Read-only')->assertDontSee('$1,234.56');
+    $this->actingAs($buyer)->get(route('vehicles.show', $vehicle))->assertDontSee('$1,235');
+    $this->actingAs($buyer)->get(route('records.edit', [$vehicle, $old]))->assertForbidden();
+
+    Livewire::actingAs($buyer)->test(History::class, ['vehicle' => $vehicle])
+        ->call('delete', $old->id)->assertNotFound();
+    Livewire::actingAs($buyer)->test(RecordForm::class, ['vehicle' => $vehicle, 'record' => $old])->assertForbidden();
+
+    expect($old->fresh())->not->toBeNull();
+
+    // A share link the new owner creates with costs switched on still hides the old owner's costs.
+    $link = $vehicle->shareLinks()->create(['label' => 'Insurer', 'show_costs' => true]);
+    $this->get($link->url())->assertSee('Clutch by the old owner')->assertDontSee('$1,235');
 });
 
 it('runs the whole flow through the deal room', function () {

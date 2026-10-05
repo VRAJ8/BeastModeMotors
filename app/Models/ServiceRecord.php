@@ -149,6 +149,15 @@ class ServiceRecord extends Model
         return $this->verified_at !== null;
     }
 
+    /**
+     * Records logged by earlier owners are part of the car's history: readable, never editable,
+     * and their costs stay private to the owner who paid them.
+     */
+    public function isFromOwnership(?int $ownershipId): bool
+    {
+        return $ownershipId !== null && $this->ownership_id === $ownershipId;
+    }
+
     public function canRequestVerification(): bool
     {
         return $this->provider_type !== ProviderType::Diy

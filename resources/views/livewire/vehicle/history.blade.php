@@ -30,6 +30,7 @@
         <ol class="mt-6 space-y-3">
             @foreach ($records as $record)
                 @php($latest = $record->verifications->first())
+                @php($mine = $record->isFromOwnership($currentOwnershipId))
                 <li class="card p-4 sm:p-5" wire:key="record-{{ $record->id }}">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
                         <div class="w-28 shrink-0">
@@ -44,13 +45,13 @@
                             </div>
                             <p class="mt-1 text-sm text-muted">
                                 {{ $record->provider_name ?: $record->provider_type->getLabel() }}
-                                @if ($record->cost_cents) · <span class="num">{{ money($record->cost_cents, true) }}</span>@endif
+                                @if ($mine && $record->cost_cents) · <span class="num">{{ money($record->cost_cents, true) }}</span>@endif
                                 @if ($record->ownership_id !== $currentOwnershipId && $record->ownership) · <span class="text-ink-soft">{{ $record->ownership->label() }}</span>@endif
                             </p>
                             @if ($record->description)
                                 <p class="mt-2 text-sm text-ink-soft">{{ $record->description }}</p>
                             @endif
-                            @if ($record->line_items)
+                            @if ($mine && $record->line_items)
                                 <ul class="mt-2 max-w-md space-y-0.5 text-xs text-muted">
                                     @foreach ($record->line_items as $item)
                                         <li class="flex justify-between gap-4"><span>{{ $item['description'] }} <span class="opacity-60">· {{ $item['kind'] }}</span></span><span class="num">{{ money($item['amount_cents'], true) }}</span></li>
@@ -77,6 +78,7 @@
                                 <p class="mt-3 text-xs text-verified">Confirmed by {{ $latest->responder_name }} at {{ $latest->shop_name }} on {{ $latest->responded_at->format('M j, Y') }}</p>
                             @endif
                         </div>
+                        @if ($mine)
                         <div class="flex shrink-0 items-center gap-1 sm:flex-col sm:items-end">
                             @if ($record->canRequestVerification() && ! $record->pendingVerification)
                                 <button wire:click="startVerification({{ $record->id }})" class="btn-secondary btn-sm"><x-heroicon-m-check-badge class="size-4" /> Ask shop to verify</button>
@@ -86,11 +88,14 @@
                                 <button wire:click="delete({{ $record->id }})" wire:confirm="Delete this record and its receipts? This can't be undone." class="btn-ghost btn-sm text-danger hover:bg-danger-soft hover:text-danger">Delete</button>
                             </div>
                         </div>
+                        @else
+                            <span class="badge-gray shrink-0 self-start" title="Logged by a previous owner — part of the car's history, so it can't be changed">Read-only</span>
+                        @endif
                     </div>
                 </li>
             @endforeach
         </ol>
-        <p class="mt-4 text-right text-sm text-muted">Total recorded spend <span class="num font-semibold text-ink">{{ money($spend) }}</span></p>
+        <p class="mt-4 text-right text-sm text-muted">Your recorded spend <span class="num font-semibold text-ink">{{ money($spend) }}</span></p>
     @endif
 
     {{-- Verification request dialog --}}

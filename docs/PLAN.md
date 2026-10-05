@@ -25,7 +25,7 @@ The wedge is **shop verification**: a signed link a shop can answer in ten secon
 ```
 User ─┬─< Vehicle (current owner) ─┬─< Ownership (Owner 1, 2, …)   ← the chain of custody
       │                            ├─< ServiceRecord ─┬─< Document (receipts)
-      │                            │                  ├─< ShopVerification (signed-link answers)
+      │                            │                  ├─< ShopVerification ─> Shop (keyed by email)
       │                            │                  └── OdometerReading (1:1, kept in sync)
       │                            ├─< OdometerReading (purchase, manual, sale…)
       │                            ├─< Reminder (miles / months intervals)
@@ -68,12 +68,17 @@ Grades: A ≥ 85, B ≥ 70, C ≥ 50, D below 50.
 - Trust & safety console.
 - 131 Pest tests, CI, Docker image, Render blueprint, seeded demo world.
 
+## Shipped in v1.1
+- **Shop profiles and directory.** Shops get a public page built from their verification track record (confirmed records, cars, response rate, typical answer time, a fast-answer badge). They edit it through a signed link, and owners pick listed shops instead of typing an email.
+- **Read-only history after a sale.** Records from earlier ownerships can't be edited or deleted, and their costs stay private.
+- **Production setup.** S3/R2 storage for receipts and photos, SMTP email, PostgreSQL (with a CI job running the whole suite on it).
+- 146 Pest tests, and a recorded sale walkthrough in the README.
+
 ## Roadmap
-1. **Shop profiles.** Shops that verify often get a public page and a "verifies within 24h" badge; owners can pick a shop from a directory instead of typing an email.
-2. **Receipt OCR.** Upload a photo and the date, mileage, line items and shop are filled in for you.
-3. **Telematics and OBD readings.** Odometer readings from connected-car APIs (Smartcar) or a Bluetooth OBD dongle, tagged as device-sourced.
-4. **Market value.** Price guidance from comparable sales on the platform, adjusted for Passport Score, to show what documentation is worth.
-5. **Verified identity for sellers** (ID plus selfie) and a "met in person" confirmation in the deal room.
-6. **State paperwork packs.** State-specific bill of sale and odometer disclosure forms.
-7. **Insurer and warranty partnerships.** Share a passport to get a quote; extended-warranty providers accept verified maintenance as proof.
-8. **Native mobile app** for logging fuel and services at the pump or the counter.
+1. **Receipt OCR.** Upload a photo and the date, mileage, line items and shop are filled in for you.
+2. **Telematics and OBD readings.** Odometer readings from connected-car APIs (Smartcar) or a Bluetooth OBD dongle, tagged as device-sourced.
+3. **Market value.** Price guidance from comparable sales on the platform, adjusted for Passport Score, to show what documentation is worth.
+4. **Verified identity for sellers** (ID plus selfie) and a "met in person" confirmation in the deal room.
+5. **State paperwork packs.** State-specific bill of sale and odometer disclosure forms.
+6. **Insurer and warranty partnerships.** Share a passport to get a quote; extended-warranty providers accept verified maintenance as proof.
+7. **Native mobile app** for logging fuel and services at the pump or the counter.

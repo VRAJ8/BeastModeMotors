@@ -68,6 +68,8 @@ class RecordForm extends Component
         $this->record = $record?->exists ? $record : null;
 
         if ($this->record) {
+            abort_unless($record->isFromOwnership($vehicle->currentOwnership?->getKey()), 403);
+
             $this->fill([
                 'category' => $record->category->value,
                 'title' => $record->title,

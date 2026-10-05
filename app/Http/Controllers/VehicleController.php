@@ -43,6 +43,8 @@ class VehicleController extends Controller
 
     public function editRecord(Vehicle $vehicle, ServiceRecord $record): View
     {
+        abort_unless($record->isFromOwnership($vehicle->currentOwnership?->getKey()), 403, 'Records from previous owners can\'t be edited.');
+
         return view('vehicles.record-form', compact('vehicle', 'record'));
     }
 

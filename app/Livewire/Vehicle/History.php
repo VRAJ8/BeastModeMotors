@@ -83,9 +83,15 @@ class History extends Component
         $this->dispatch('toast', message: 'Record deleted.');
     }
 
+    /**
+     * Only the current owner's own records can be changed; earlier owners' records are read-only.
+     */
     private function findRecord(?int $id): ServiceRecord
     {
-        return $this->vehicle->records()->whereKey($id)->firstOrFail();
+        return $this->vehicle->records()
+            ->where('ownership_id', $this->vehicle->currentOwnership?->getKey())
+            ->whereKey($id)
+            ->firstOrFail();
     }
 
     public function render()
@@ -104,7 +110,7 @@ class History extends Component
             'categories' => ServiceCategory::options(),
             'counts' => $all->countBy(fn (ServiceRecord $r) => $r->evidence()),
             'total' => $all->count(),
-            'spend' => $all->sum('cost_cents'),
+            'spend' => $all->where('ownership_id', $this->vehicle->currentOwnership?->getKey())->sum('cost_cents'),
             'currentOwnershipId' => $this->vehicle->currentOwnership?->getKey(),
         ]);
     }

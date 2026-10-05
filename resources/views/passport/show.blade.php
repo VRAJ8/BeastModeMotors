@@ -47,7 +47,7 @@
             <x-passport.mileage :vehicle="$vehicle" :anomalies="$anomalies" :miles-per-year="$milesPerYear" />
             <section>
                 <h2 class="panel-title mb-4">Service history</h2>
-                <x-passport.timeline :records="$vehicle->records" :show-costs="$link->show_costs" :document-url="$docUrl" />
+                <x-passport.timeline :records="$vehicle->records" :show-costs="$link->show_costs" :costs-for="$vehicle->currentOwnership?->id" :document-url="$docUrl" />
             </section>
         </div>
         <aside class="space-y-6">

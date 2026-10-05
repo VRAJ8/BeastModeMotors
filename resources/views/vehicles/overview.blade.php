@@ -25,7 +25,7 @@
                     <h2 class="panel-title">Recent history</h2>
                     <a href="{{ route('vehicles.history', $vehicle) }}" class="link text-sm">All records</a>
                 </div>
-                <x-passport.timeline :records="$vehicle->records" :limit="4" :show-costs="true" />
+                <x-passport.timeline :records="$vehicle->records" :limit="4" :show-costs="true" :costs-for="$vehicle->currentOwnership?->id" />
             </section>
         </div>
 

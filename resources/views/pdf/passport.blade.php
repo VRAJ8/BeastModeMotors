@@ -71,7 +71,7 @@
                 <td class="mono">{{ number_format($r->mileage) }}</td>
                 <td><strong>{{ $r->title }}</strong><br><span class="muted">{{ $r->category->getLabel() }}{{ $r->tasks ? ' · '.implode(', ', $r->tasks) : '' }}</span></td>
                 <td>{{ $r->provider_name ?: $r->provider_type->getLabel() }}</td>
-                @if ($link->show_costs)<td class="mono">{{ $r->cost_cents ? money($r->cost_cents) : '—' }}</td>@endif
+                @if ($link->show_costs)<td class="mono">{{ $r->cost_cents && $r->isFromOwnership($vehicle->currentOwnership?->id) ? money($r->cost_cents) : '—' }}</td>@endif
                 <td>
                     @switch($r->evidence())
                         @case('verified') <span class="v">SHOP VERIFIED</span> @break

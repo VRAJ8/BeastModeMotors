@@ -1,5 +1,6 @@
 {{-- Read-only record timeline for passports and listings. --}}
-@props(['records', 'showCosts' => false, 'documentUrl' => null, 'limit' => null])
+{{-- Costs are only ever shown for records from the ownership in $costsFor (the current owner's). --}}
+@props(['records', 'showCosts' => false, 'costsFor' => null, 'documentUrl' => null, 'limit' => null])
 
 @php
     $shown = $limit ? $records->take($limit) : $records;
@@ -29,7 +30,7 @@
                                             @else
                                                 {{ $record->provider_name ?: $record->provider_type->getLabel() }}
                                             @endif
-                                            @if ($showCosts && $record->cost_cents)
+                                            @if ($showCosts && $record->cost_cents && $record->isFromOwnership($costsFor))
                                                 · <span class="num">{{ money($record->cost_cents) }}</span>
                                             @endif
                                         </p>
