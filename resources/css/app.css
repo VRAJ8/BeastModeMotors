@@ -68,6 +68,14 @@
         display: none !important;
     }
 
+    /* Inter's contextual alternates turn "4x4" into "4×4" — never acceptable in what people type. */
+    input,
+    textarea,
+    select {
+        font-variant-ligatures: no-contextual;
+        font-feature-settings: 'calt' 0;
+    }
+
     h1, h2, h3 {
         @apply font-display;
         letter-spacing: -0.02em;

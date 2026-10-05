@@ -14,6 +14,7 @@ enum VerificationStatus: string implements HasColor, HasLabel
     case Confirmed = 'confirmed';
     case Disputed = 'disputed';
     case Cancelled = 'cancelled';
+    case Expired = 'expired';
 
     public function getLabel(): string
     {
@@ -21,7 +22,8 @@ enum VerificationStatus: string implements HasColor, HasLabel
             self::Pending => 'Awaiting shop',
             self::Confirmed => 'Confirmed by shop',
             self::Disputed => 'Disputed by shop',
-            self::Cancelled => 'Cancelled',
+            self::Cancelled => 'Cancelled by owner',
+            self::Expired => 'No answer',
         };
     }
 
@@ -32,6 +34,7 @@ enum VerificationStatus: string implements HasColor, HasLabel
             self::Confirmed => 'success',
             self::Disputed => 'danger',
             self::Cancelled => 'gray',
+            self::Expired => 'gray',
         };
     }
 

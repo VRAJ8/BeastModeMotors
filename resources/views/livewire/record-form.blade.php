@@ -61,18 +61,25 @@
                         @endforeach
                     </div>
                 </div>
-                @if ($provider_type !== 'diy')
+                @if ($provider_type !== 'diy' && $this->pickedShop && ! $locked)
+                    <x-shop-picker class="sm:col-span-2" :picked="$this->pickedShop" :suggestions="collect()" />
+                @elseif ($provider_type !== 'diy')
                     <div>
                         <label class="label" for="provider_name">Shop name</label>
-                        <input id="provider_name" wire:model="provider_name" class="input" placeholder="e.g. Eastside Euro Specialists" @disabled($locked)>
+                        <input id="provider_name" wire:model.live.debounce.300ms="provider_name" class="input" autocomplete="off" placeholder="e.g. Eastside Euro Specialists" @disabled($locked)>
                         @error('provider_name') <p class="error">{{ $message }}</p> @enderror
+                        @unless ($locked)
+                            <x-shop-picker class="mt-2" :picked="null" :suggestions="$this->shopSuggestions" />
+                        @endunless
                     </div>
                     <div>
                         <label class="label" for="provider_email">Shop email <span class="font-normal text-muted">(for verification)</span></label>
                         <input id="provider_email" type="email" wire:model.live.debounce.500ms="provider_email" class="input" placeholder="service@shop.com" @disabled($locked)>
                         @error('provider_email') <p class="error">{{ $message }}</p> @enderror
                     </div>
-                    @if (! $locked && $provider_email)
+                @endif
+                @if ($provider_type !== 'diy')
+                    @if (! $locked && ($provider_email || $this->pickedShop))
                         <label class="flex gap-3 rounded-xl border border-documented/20 bg-documented-soft p-3 text-sm text-documented sm:col-span-2">
                             <input type="checkbox" wire:model="requestVerification" class="checkbox mt-0.5">
                             <span><strong>Ask the shop to confirm this record.</strong> They get a one-click link — no account needed. Verified records carry the most weight with buyers.</span>

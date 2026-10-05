@@ -100,16 +100,21 @@
                 <h3 class="display text-xl">Ask the shop to verify</h3>
                 <p class="mt-1 text-sm text-ink-soft">We'll email them the record with a one-click confirm link. They don't need an account, and they can flag anything that doesn't match their invoice.</p>
                 <div class="mt-5 space-y-4">
-                    <div>
-                        <label class="label" for="shopName">Shop name</label>
-                        <input id="shopName" wire:model="shopName" class="input">
-                        @error('shopName') <p class="error">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="label" for="shopEmail">Shop email</label>
-                        <input id="shopEmail" type="email" wire:model="shopEmail" class="input" placeholder="service@shop.com">
-                        @error('shopEmail') <p class="error">{{ $message }}</p> @enderror
-                    </div>
+                    @if ($this->pickedShop)
+                        <x-shop-picker :picked="$this->pickedShop" :suggestions="collect()" />
+                    @else
+                        <div>
+                            <label class="label" for="shopName">Shop name</label>
+                            <input id="shopName" wire:model.live.debounce.300ms="shopName" class="input" autocomplete="off" placeholder="Start typing to find shops that already verify">
+                            @error('shopName') <p class="error">{{ $message }}</p> @enderror
+                            <x-shop-picker class="mt-2" :picked="null" :suggestions="$this->shopSuggestions" />
+                        </div>
+                        <div>
+                            <label class="label" for="shopEmail">Shop email</label>
+                            <input id="shopEmail" type="email" wire:model="shopEmail" class="input" placeholder="service@shop.com">
+                            @error('shopEmail') <p class="error">{{ $message }}</p> @enderror
+                        </div>
+                    @endif
                 </div>
                 <div class="mt-6 flex justify-end gap-2">
                     <button type="button" wire:click="$set('verifyingId', null)" class="btn-ghost">Cancel</button>

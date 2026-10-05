@@ -19,7 +19,7 @@ it('loads every admin screen', function (string $path) {
     deal()->messages()->create(['user_id' => null, 'body' => 'x', 'risk_flags' => [['label' => 'Test', 'severity' => 'high']]]);
 
     $this->actingAs($this->admin)->get($path)->assertOk();
-})->with(['/admin', '/admin/listings', '/admin/reports', '/admin/deals', '/admin/shop-verifications', '/admin/vehicles', '/admin/users']);
+})->with(['/admin', '/admin/listings', '/admin/reports', '/admin/deals', '/admin/shop-verifications', '/admin/vehicles', '/admin/users', '/admin/shops']);
 
 it('removes a reported listing and closes the report', function () {
     $listing = liveListing();

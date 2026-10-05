@@ -17,7 +17,7 @@ class VehicleController extends Controller
 {
     public function overview(Vehicle $vehicle, PassportScore $scorer, OdometerAnalyzer $odometer): View
     {
-        $vehicle->load(['photos', 'ownerships.user', 'readings', 'reminders', 'recalls', 'openListing', 'records' => fn ($q) => $q->withCount('documents')]);
+        $vehicle->load(['photos', 'ownerships.user', 'readings', 'reminders', 'recalls', 'openListing', 'records' => fn ($q) => $q->withCount('documents')->with('shop')]);
 
         return view('vehicles.overview', [
             'vehicle' => $vehicle,

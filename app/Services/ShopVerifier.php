@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\VerificationStatus;
 use App\Models\ServiceRecord;
+use App\Models\Shop;
 use App\Models\ShopVerification;
 use App\Models\User;
 use App\Notifications\VerificationAnswered;
@@ -33,6 +34,7 @@ class ShopVerifier
 
         $verification = $record->verifications()->create([
             'requested_by' => $owner->getKey(),
+            'shop_id' => Shop::forEmail($shopEmail, $shopName)->getKey(),
             'shop_name' => $shopName,
             'shop_email' => $shopEmail,
             'status' => VerificationStatus::Pending,
@@ -60,7 +62,7 @@ class ShopVerifier
             ]);
 
             $verification->record->update($confirmed
-                ? ['verified_at' => now(), 'disputed_at' => null]
+                ? ['verified_at' => now(), 'disputed_at' => null, 'shop_id' => $verification->shop_id]
                 : ['disputed_at' => now()]);
         });
 

@@ -24,7 +24,11 @@
                                         <p class="mt-0.5 text-xs text-muted">
                                             <span class="num">{{ $record->performed_on->format('M j, Y') }}</span> ·
                                             <span class="num">{{ miles($record->mileage) }}</span> ·
-                                            {{ $record->provider_name ?: $record->provider_type->getLabel() }}
+                                            @if ($record->shop && $record->shop->is_listed && $record->evidence() === 'verified')
+                                                <a href="{{ route('shops.show', $record->shop) }}" class="underline decoration-line-strong underline-offset-2 hover:text-ink">{{ $record->shop->name }}</a>
+                                            @else
+                                                {{ $record->provider_name ?: $record->provider_type->getLabel() }}
+                                            @endif
                                             @if ($showCosts && $record->cost_cents)
                                                 · <span class="num">{{ money($record->cost_cents) }}</span>
                                             @endif

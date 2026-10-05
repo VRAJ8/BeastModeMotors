@@ -10,6 +10,7 @@
                 <li><a class="text-ink-soft hover:text-ink" href="{{ route('register') }}">Start a passport</a></li>
                 <li><a class="text-ink-soft hover:text-ink" href="{{ route('how-it-works') }}">How it works</a></li>
                 <li><a class="text-ink-soft hover:text-ink" href="{{ route('how-it-works') }}#score">The Passport Score</a></li>
+                <li><a class="text-ink-soft hover:text-ink" href="{{ route('shops.index') }}">Shops that verify</a></li>
             </ul>
         </div>
         <div>

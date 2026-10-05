@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\URL;
 class ShopVerification extends Model
 {
     protected $fillable = [
-        'service_record_id', 'requested_by', 'shop_name', 'shop_email', 'status', 'responder_name', 'response_note',
+        'service_record_id', 'requested_by', 'shop_id', 'shop_name', 'shop_email', 'status', 'responder_name', 'response_note',
         'responder_ip', 'responded_at', 'expires_at',
     ];
 
@@ -32,6 +32,14 @@ class ShopVerification extends Model
     public function record(): BelongsTo
     {
         return $this->belongsTo(ServiceRecord::class, 'service_record_id');
+    }
+
+    /**
+     * @return BelongsTo<Shop, $this>
+     */
+    public function shop(): BelongsTo
+    {
+        return $this->belongsTo(Shop::class);
     }
 
     /**

@@ -31,7 +31,7 @@ class ServiceRecord extends Model
 
     protected $fillable = [
         'vehicle_id', 'ownership_id', 'logged_by', 'category', 'title', 'description', 'performed_on', 'mileage',
-        'cost_cents', 'line_items', 'provider_type', 'provider_name', 'provider_email', 'tasks', 'verified_at',
+        'cost_cents', 'line_items', 'provider_type', 'provider_name', 'provider_email', 'shop_id', 'tasks', 'verified_at',
         'disputed_at',
     ];
 
@@ -62,6 +62,16 @@ class ServiceRecord extends Model
     public function ownership(): BelongsTo
     {
         return $this->belongsTo(Ownership::class);
+    }
+
+    /**
+     * The shop that confirmed this record.
+     *
+     * @return BelongsTo<Shop, $this>
+     */
+    public function shop(): BelongsTo
+    {
+        return $this->belongsTo(Shop::class);
     }
 
     /**

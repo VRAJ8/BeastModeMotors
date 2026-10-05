@@ -9,6 +9,16 @@
                 We've told the owner the record doesn't match your files.
             @endif
         </p>
+        @if ($verification->shop && $verification->status === \App\Enums\VerificationStatus::Confirmed)
+            <div class="card card-pad mt-10 text-left">
+                <p class="font-semibold">Your shop now has a public profile</p>
+                <p class="mt-1 text-sm text-ink-soft">It shows the work you've confirmed and how quickly you answer. Add your address, phone and specialties so car owners can find you.</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <a href="{{ $verification->shop->editUrl() }}" class="btn-primary btn-sm">Complete your profile</a>
+                    <a href="{{ route('shops.show', $verification->shop) }}" class="btn-secondary btn-sm">View it</a>
+                </div>
+            </div>
+        @endif
         <a href="{{ route('how-it-works') }}" class="link mt-6 inline-block">What is Beast Mode Motors?</a>
     </div>
 </x-layouts.site>

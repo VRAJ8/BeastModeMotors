@@ -7,6 +7,7 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PassportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopVerificationController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\VehicleController;
@@ -31,10 +32,15 @@ Route::get('/p/{shareLink}', [PassportController::class, 'show'])->name('passpor
 Route::get('/p/{shareLink}/report.pdf', [PassportController::class, 'pdf'])->name('passport.pdf');
 Route::get('/p/{shareLink}/documents/{document}', [PassportController::class, 'document'])->name('passport.document');
 
-// Shops answer verification requests through signed, expiring links — no account needed.
+Route::get('/shops', [ShopController::class, 'index'])->name('shops.index');
+Route::get('/shops/{shop}', [ShopController::class, 'show'])->name('shops.show');
+
+// Shops answer verification requests and edit their profile through signed, expiring links — no account needed.
 Route::middleware(['signed', 'throttle:20,1'])->group(function () {
     Route::get('/verify/{verification}', [ShopVerificationController::class, 'show'])->name('verify.show');
     Route::post('/verify/{verification}', [ShopVerificationController::class, 'store'])->name('verify.store');
+    Route::get('/shops/{shop:id}/profile', [ShopController::class, 'edit'])->name('shops.edit');
+    Route::post('/shops/{shop:id}/profile', [ShopController::class, 'update'])->name('shops.update');
 });
 
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');

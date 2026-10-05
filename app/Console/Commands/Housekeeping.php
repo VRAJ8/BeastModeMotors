@@ -17,7 +17,7 @@ class Housekeeping extends Command
     public function handle(): int
     {
         $offers = Offer::where('status', OfferStatus::Pending)->where('expires_at', '<=', now())->update(['status' => OfferStatus::Expired]);
-        $requests = ShopVerification::where('status', VerificationStatus::Pending)->where('expires_at', '<=', now())->update(['status' => VerificationStatus::Cancelled]);
+        $requests = ShopVerification::where('status', VerificationStatus::Pending)->where('expires_at', '<=', now())->update(['status' => VerificationStatus::Expired]);
 
         $this->components->info("Expired {$offers} offers and {$requests} verification requests.");
 

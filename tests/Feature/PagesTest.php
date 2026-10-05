@@ -9,7 +9,7 @@ use Livewire\Livewire;
 
 it('serves the public pages', function (string $route) {
     $this->get(route($route))->assertOk();
-})->with(['home', 'marketplace', 'how-it-works', 'safety', 'vin-check', 'login', 'register']);
+})->with(['home', 'marketplace', 'shops.index', 'how-it-works', 'safety', 'vin-check', 'login', 'register']);
 
 it('lists public listings in the sitemap and keeps private areas out of robots', function () {
     $listing = liveListing();

@@ -31,7 +31,7 @@ class MarketplaceController extends Controller
 
         $vehicle = $listing->vehicle->load([
             'photos', 'ownerships', 'readings', 'reminders', 'recalls',
-            'records' => fn ($q) => $q->withCount('documents')->with(['documents' => fn ($d) => $d->transferable()]),
+            'records' => fn ($q) => $q->withCount('documents')->with(['shop', 'documents' => fn ($d) => $d->transferable()]),
         ]);
 
         $publisher->refreshScore($listing);

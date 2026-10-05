@@ -6,7 +6,9 @@ use App\Enums\DocumentType;
 use App\Enums\ProviderType;
 use App\Enums\ServiceCategory;
 use App\Livewire\Concerns\ManagesVehicle;
+use App\Livewire\Concerns\PicksShop;
 use App\Models\ServiceRecord;
+use App\Models\Shop;
 use App\Models\Vehicle;
 use App\Services\MaintenancePlanner;
 use App\Services\ShopVerifier;
@@ -21,7 +23,7 @@ use Livewire\WithFileUploads;
 
 class RecordForm extends Component
 {
-    use ManagesVehicle, WithFileUploads;
+    use ManagesVehicle, PicksShop, WithFileUploads;
 
     #[Locked]
     public Vehicle $vehicle;
@@ -96,6 +98,17 @@ class RecordForm extends Component
             $this->title = $task->task;
             $this->reminderIds = [$task->getKey()];
         }
+    }
+
+    protected function shopSearchTerm(): string
+    {
+        return $this->provider_name;
+    }
+
+    protected function applyPickedShop(?Shop $shop): void
+    {
+        $this->provider_name = $shop->name ?? '';
+        $this->provider_email = '';
     }
 
     public function addItem(): void
@@ -192,6 +205,8 @@ class RecordForm extends Component
             throw ValidationException::withMessages(['mileage' => 'This is lower than an earlier reading. Tick the box to confirm it\'s correct.']);
         }
 
+        $shop = $this->pickedShop;
+
         $facts = [
             'category' => $this->category,
             'title' => $this->title,
@@ -205,7 +220,7 @@ class RecordForm extends Component
             ])->all() : null,
             'provider_type' => $this->provider_type,
             'provider_name' => $this->provider_name ?: null,
-            'provider_email' => $this->provider_email ?: null,
+            'provider_email' => $shop->email ?? ($this->provider_email ?: null),
         ];
 
         if ($this->record) {
@@ -239,9 +254,11 @@ class RecordForm extends Component
 
         $message = $this->record ? 'Record updated.' : 'Record added to the passport.';
 
-        if ($this->requestVerification && ! $locked && $this->provider_email && $this->provider_type !== ProviderType::Diy->value) {
+        $verifyEmail = $shop->email ?? $this->provider_email;
+
+        if ($this->requestVerification && ! $locked && $verifyEmail && $this->provider_type !== ProviderType::Diy->value) {
             try {
-                $verifier->request($record->fresh(), Auth::user(), $this->provider_name, $this->provider_email);
+                $verifier->request($record->fresh(), Auth::user(), $this->provider_name, $verifyEmail);
                 $message .= ' We\'ve asked '.$this->provider_name.' to confirm it.';
             } catch (ValidationException) {
                 // Not eligible right now (e.g. already pending); the owner can retry from the history page.

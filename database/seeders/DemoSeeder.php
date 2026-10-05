@@ -19,6 +19,7 @@ use App\Models\Document;
 use App\Models\Listing;
 use App\Models\Ownership;
 use App\Models\ServiceRecord;
+use App\Models\Shop;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehiclePhoto;
@@ -32,6 +33,7 @@ use App\Support\CarIllustration;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * A believable little world: owners with multi-year histories, cars for sale, and deals in every state.
@@ -42,6 +44,9 @@ class DemoSeeder extends Seeder
 
     /** @var array<string, User> */
     private array $people = [];
+
+    /** @var array<string, string> Shop email by name, so every record from one shop links to one profile. */
+    private array $shopEmails = [];
 
     public function __construct(
         private VinDecoder $vins,
@@ -173,15 +178,17 @@ class DemoSeeder extends Seeder
 
         // A pending verification request and a few notifications for the demo owner.
         $latest = $porsche->records()->first();
-        $latest->update(['verified_at' => null]);
+        $latest->update(['verified_at' => null, 'shop_id' => null]);
         $latest->verifications()->delete();
         $latest->verifications()->create([
-            'requested_by' => $this->people['alex']->getKey(), 'shop_name' => 'Eastside Euro Specialists', 'shop_email' => 'shop@eastsideeuro.test',
+            'requested_by' => $this->people['alex']->getKey(), 'shop_id' => Shop::forEmail('shop@eastsideeuro.test', 'Eastside Euro Specialists')->id, 'shop_name' => 'Eastside Euro Specialists', 'shop_email' => 'shop@eastsideeuro.test',
             'status' => VerificationStatus::Pending, 'expires_at' => now()->addDays(12), 'created_at' => now()->subDays(2),
         ]);
 
         $answered = $porsche->records()->whereNotNull('verified_at')->first()->verifications()->first();
         $this->people['alex']->notifyNow(new VerificationAnswered($answered), ['database']);
+
+        $this->shopProfiles();
 
         foreach (Listing::public()->get() as $listing) {
             $this->publisher->refreshScore($listing);
@@ -342,8 +349,15 @@ class DemoSeeder extends Seeder
 
     private function record(Vehicle $vehicle, Ownership $ownership, Carbon $on, int $miles, string $title, ServiceCategory $category, string $provider, ProviderType $type, int $cost, string $evidence, array $tasks, ?string $email = null): ServiceRecord
     {
+        if ($type !== ProviderType::Diy) {
+            $email ??= $this->shopEmails[$provider] ?? 'service@'.Str::slug($provider, '').'.test';
+            $this->shopEmails[$provider] ??= $email;
+        }
+
         $backfilled = $evidence === 'self' && mt_rand(0, 2) === 0;
         $loggedAt = $backfilled ? $on->copy()->addMonths(mt_rand(3, 14)) : $on->copy()->addHours(mt_rand(2, 72));
+        $shop = in_array($evidence, ['verified', 'disputed'], true) ? Shop::forEmail($email, $provider) : null;
+        $answeredAt = $shop ? $loggedAt->copy()->addMinutes($this->answerMinutes($shop)) : null;
 
         $record = new ServiceRecord([
             'vehicle_id' => $vehicle->id,
@@ -357,8 +371,9 @@ class DemoSeeder extends Seeder
             'provider_type' => $type,
             'provider_name' => $type === ProviderType::Diy ? null : $provider,
             'provider_email' => $email,
-            'verified_at' => $evidence === 'verified' ? $loggedAt->copy()->addDays(1) : null,
-            'disputed_at' => $evidence === 'disputed' ? $loggedAt->copy()->addDays(2) : null,
+            'verified_at' => $evidence === 'verified' ? $answeredAt : null,
+            'disputed_at' => $evidence === 'disputed' ? $answeredAt : null,
+            'shop_id' => $evidence === 'verified' ? $shop->id : null,
         ]);
         $record->created_at = min($loggedAt, now());
         $record->save();
@@ -370,8 +385,9 @@ class DemoSeeder extends Seeder
         if (in_array($evidence, ['verified', 'disputed'], true)) {
             $record->verifications()->create([
                 'requested_by' => $ownership->user_id,
+                'shop_id' => $shop->id,
                 'shop_name' => $provider,
-                'shop_email' => $email ?? 'service@shop.test',
+                'shop_email' => $email,
                 'status' => $evidence === 'verified' ? VerificationStatus::Confirmed : VerificationStatus::Disputed,
                 'responder_name' => ['Dee Marshall', 'Luis Ortega', 'Kim Tran', 'Rob Feld'][mt_rand(0, 3)].' (service advisor)',
                 'response_note' => $evidence === 'disputed' ? 'We fitted the tires and did the alignment, but the lift kit was installed elsewhere. Our invoice was $1,140.' : null,
@@ -387,6 +403,35 @@ class DemoSeeder extends Seeder
         }
 
         return $record;
+    }
+
+    /**
+     * Each shop has its own habits: dealers answer within hours, small shops can take a day or two.
+     */
+    private function answerMinutes(Shop $shop): int
+    {
+        $base = crc32($shop->email) % 3;
+
+        return [mt_rand(40, 360), mt_rand(240, 1300), mt_rand(1200, 3600)][$base];
+    }
+
+    private function shopProfiles(): void
+    {
+        foreach ([
+            'shop@eastsideeuro.test' => ['Miami', 'FL', '(305) 555-0144', 'https://eastsideeuro.example', ['Porsche', 'BMW', 'Audi', 'Pre-purchase inspections'], "Independent Porsche and BMW specialists since 2009. Factory-trained technicians, OEM parts, and we photograph every job for the customer's records."],
+            'service@porschecoralgables.test' => ['Coral Gables', 'FL', '(305) 555-0110', null, ['Porsche'], null],
+            'service@bmwdenver.test' => ['Denver', 'CO', '(303) 555-0190', null, ['BMW', 'MINI'], 'Franchise BMW service department.'],
+            'service@lexusdublin.test' => ['Dublin', 'OH', '(614) 555-0162', null, ['Lexus', 'Toyota'], null],
+            'shop@zoomzoom.test' => ['Austin', 'TX', '(512) 555-0133', 'https://zoomzoomgarage.example', ['Mazda', 'Miata', 'Track prep'], 'Two-bay Mazda specialist. We love Miatas.'],
+            'service@subaruportland.test' => ['Portland', 'OR', null, null, ['Subaru'], null],
+            'service@bellauto.test' => ['Atlanta', 'GA', '(404) 555-0108', null, ['Ford', 'Trucks', 'Diesel'], null],
+            'service@fordsd.test' => ['San Diego', 'CA', null, null, ['Ford', 'EV'], null],
+        ] as $email => [$city, $state, $phone, $website, $specialties, $about]) {
+            Shop::where('email', $email)->update([
+                'city' => $city, 'state' => $state, 'phone' => $phone, 'website' => $website,
+                'specialties' => json_encode($specialties), 'about' => $about, 'profile_completed_at' => now()->subDays(mt_rand(5, 200)),
+            ]);
+        }
     }
 
     private function milesAt(Vehicle $vehicle, Carbon $on): int

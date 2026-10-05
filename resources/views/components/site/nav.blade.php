@@ -2,8 +2,8 @@
     $user = auth()->user();
     $unread = $user?->unreadNotifications()->count() ?? 0;
     $links = $user
-        ? [['Garage', route('garage'), request()->routeIs('garage', 'vehicles.*', 'records.*')], ['Deals', route('deals.index'), request()->routeIs('deals.*')], ['Marketplace', route('marketplace'), request()->routeIs('marketplace', 'listings.*')], ['VIN check', route('vin-check'), request()->routeIs('vin-check')]]
-        : [['Marketplace', route('marketplace'), request()->routeIs('marketplace', 'listings.*')], ['VIN check', route('vin-check'), request()->routeIs('vin-check')], ['How it works', route('how-it-works'), request()->routeIs('how-it-works')], ['Selling safely', route('safety'), request()->routeIs('safety')]];
+        ? [['Garage', route('garage'), request()->routeIs('garage', 'vehicles.*', 'records.*')], ['Deals', route('deals.index'), request()->routeIs('deals.*')], ['Marketplace', route('marketplace'), request()->routeIs('marketplace', 'listings.*')], ['Shops', route('shops.index'), request()->routeIs('shops.*')], ['VIN check', route('vin-check'), request()->routeIs('vin-check')]]
+        : [['Marketplace', route('marketplace'), request()->routeIs('marketplace', 'listings.*')], ['VIN check', route('vin-check'), request()->routeIs('vin-check')], ['Shops', route('shops.index'), request()->routeIs('shops.*')], ['How it works', route('how-it-works'), request()->routeIs('how-it-works')], ['Selling safely', route('safety'), request()->routeIs('safety')]];
 @endphp
 
 <header x-data="{ open: false }" class="no-print sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur-md">

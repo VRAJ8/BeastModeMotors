@@ -5,7 +5,9 @@ namespace App\Livewire\Vehicle;
 use App\Enums\ServiceCategory;
 use App\Enums\VerificationStatus;
 use App\Livewire\Concerns\ManagesVehicle;
+use App\Livewire\Concerns\PicksShop;
 use App\Models\ServiceRecord;
+use App\Models\Shop;
 use App\Models\Vehicle;
 use App\Services\ShopVerifier;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +17,7 @@ use Livewire\Component;
 
 class History extends Component
 {
-    use ManagesVehicle;
+    use ManagesVehicle, PicksShop;
 
     #[Locked]
     public Vehicle $vehicle;
@@ -38,19 +40,33 @@ class History extends Component
         $this->verifyingId = $record->getKey();
         $this->shopName = (string) $record->provider_name;
         $this->shopEmail = (string) $record->provider_email;
+        $this->shopId = $record->shop_id;
         $this->resetErrorBag();
+    }
+
+    protected function shopSearchTerm(): string
+    {
+        return $this->shopName;
+    }
+
+    protected function applyPickedShop(?Shop $shop): void
+    {
+        $this->shopName = $shop->name ?? '';
+        $this->shopEmail = '';
     }
 
     public function sendVerification(ShopVerifier $verifier): void
     {
+        $shop = $this->pickedShop;
+
         $this->validate([
             'shopName' => ['required', 'string', 'max:120'],
-            'shopEmail' => ['required', 'email', 'max:255'],
+            'shopEmail' => [$shop ? 'nullable' : 'required', 'email', 'max:255'],
         ], [], ['shopName' => 'shop name', 'shopEmail' => 'shop email']);
 
-        $verifier->request($this->findRecord($this->verifyingId), Auth::user(), $this->shopName, $this->shopEmail);
+        $verifier->request($this->findRecord($this->verifyingId), Auth::user(), $shop->name ?? $this->shopName, $shop->email ?? $this->shopEmail);
 
-        $this->reset('verifyingId', 'shopName', 'shopEmail');
+        $this->reset('verifyingId', 'shopName', 'shopEmail', 'shopId');
         $this->dispatch('toast', message: 'Sent. The shop has 14 days to confirm.');
     }
 
