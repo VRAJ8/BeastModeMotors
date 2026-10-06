@@ -32,6 +32,7 @@ use App\Services\VinDecoder;
 use App\Support\CarIllustration;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -57,7 +58,15 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
-        config(['queue.default' => 'sync']);
+        // Demo people get in-app notifications only: nothing is emailed, even with a real mailer configured.
+        config(['queue.default' => 'sync', 'mail.default' => 'array']);
+
+        // All or nothing: a half-built demo would otherwise count as "already seeded" on every later boot.
+        DB::transaction(fn () => $this->seed());
+    }
+
+    private function seed(): void
+    {
         mt_srand(8);
         $this->password = Hash::make('password');
 
@@ -176,12 +185,13 @@ class DemoSeeder extends Seeder
             'details' => 'Says no accidents, but one of the photos shows overspray on the rear bumper.',
         ]);
 
-        // A pending verification request and a few notifications for the demo owner.
-        $latest = $porsche->records()->first();
+        // A pending verification request and a few notifications for the demo owner. It goes to the shop that
+        // actually did that job: Alex's visits alternate between two shops.
+        $latest = $porsche->records()->where('provider_email', 'shop@eastsideeuro.test')->first();
         $latest->update(['verified_at' => null, 'shop_id' => null]);
         $latest->verifications()->delete();
         $latest->verifications()->create([
-            'requested_by' => $this->people['alex']->getKey(), 'shop_id' => Shop::forEmail('shop@eastsideeuro.test', 'Eastside Euro Specialists')->id, 'shop_name' => 'Eastside Euro Specialists', 'shop_email' => 'shop@eastsideeuro.test',
+            'requested_by' => $this->people['alex']->getKey(), 'shop_id' => Shop::forEmail('shop@eastsideeuro.test', 'Eastside Euro Specialists')->id, 'shop_name' => $latest->provider_name, 'shop_email' => 'shop@eastsideeuro.test',
             'status' => VerificationStatus::Pending, 'expires_at' => now()->addDays(12), 'created_at' => now()->subDays(2),
         ]);
 
@@ -271,8 +281,11 @@ class DemoSeeder extends Seeder
             $this->generateHistory($vehicle, $ownership, $start, $end ?? $until, $startMiles, $perYear, $quality, $providers, $spec['fuel']);
 
             if (! $end) {
-                $miles = $startMiles + (int) ($perYear * $start->diffInDays($until) / 365);
-                $vehicle->readings()->create(['ownership_id' => $ownership->id, 'reading' => $miles, 'recorded_on' => $until->copy()->subDays(6), 'source' => OdometerSource::Manual]);
+                // The owner's latest reading, with the miles for the day it was taken: records logged after it
+                // carry more miles, so the history never appears to run backwards.
+                $closingOn = $until->copy()->subDays(6);
+                $miles = $startMiles + (int) ($perYear * $start->diffInDays($closingOn) / 365);
+                $vehicle->readings()->create(['ownership_id' => $ownership->id, 'reading' => $miles, 'recorded_on' => $closingOn, 'source' => OdometerSource::Manual]);
             }
         }
 
@@ -339,7 +352,13 @@ class DemoSeeder extends Seeder
             $followUp = $date->copy()->addDays(mt_rand(20, 60));
 
             if (! $electric && $n % 2 === 1 && mt_rand(0, 2) === 0 && $followUp->lt($to->copy()->subDays(10))) {
-                $this->record($vehicle, $ownership, $followUp, $miles + mt_rand(300, 900), 'State safety inspection', ServiceCategory::Inspection, $provider, $type === ProviderType::Diy ? ProviderType::Independent : $type, 3500, $evidence === 'self' ? 'receipt' : $evidence, ['State inspection'], $email);
+                // Same straight-line mileage as everything else, so an inspection never out-runs a later reading.
+                $followUpMiles = $startMiles + (int) ($perYear * $from->diffInDays($followUp) / 365);
+                // Owners who do their own servicing still need a state station for the inspection.
+                [$station, $stationType, $stationEmail] = $type === ProviderType::Diy
+                    ? ['Main Street Inspection Station', ProviderType::Independent, 'inspections@mainstreetstation.test']
+                    : [$provider, $type, $email];
+                $this->record($vehicle, $ownership, $followUp, $followUpMiles, 'State safety inspection', ServiceCategory::Inspection, $station, $stationType, 3500, $evidence === 'self' ? 'receipt' : $evidence, ['State inspection'], $stationEmail);
             }
 
             $date->addMonths($stepMonths)->addDays(mt_rand(-15, 15));

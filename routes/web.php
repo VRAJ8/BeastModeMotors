@@ -13,6 +13,13 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
+// Numeric ids only (and small enough for a bigint): anything else is a 404, not a database error.
+Route::pattern('vehicle', '[0-9]{1,18}');
+Route::pattern('deal', '[0-9]{1,18}');
+Route::pattern('document', '[0-9]{1,18}');
+Route::pattern('record', '[0-9]{1,18}');
+Route::pattern('verification', '[0-9]{1,18}');
+
 /*
 |--------------------------------------------------------------------------
 | Public
@@ -81,7 +88,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
     Route::post('/notifications/read', [NotificationController::class, 'markAllRead'])->name('notifications.read');
-    Route::get('/notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');
+    Route::get('/notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open')->whereUuid('id');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

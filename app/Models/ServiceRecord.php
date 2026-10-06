@@ -172,7 +172,7 @@ class ServiceRecord extends Model
         return $this->provider_type !== ProviderType::Diy
             && $this->verified_at === null
             && $this->disputed_at === null
-            && $this->verifications()->count() < config('passport.verification.max_requests_per_record');
+            && ($this->verifications_count ?? $this->verifications()->count()) < config('passport.verification.max_requests_per_record');
     }
 
     protected static function booted(): void

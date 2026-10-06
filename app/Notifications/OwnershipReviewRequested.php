@@ -5,14 +5,14 @@ namespace App\Notifications;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * Sent to support when someone says the car behind an existing passport is theirs.
  */
-class OwnershipReviewRequested extends Notification implements ShouldQueue
+class OwnershipReviewRequested extends Notification implements ShouldQueueAfterCommit
 {
     use Queueable;
 

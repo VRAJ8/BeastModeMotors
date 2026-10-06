@@ -161,18 +161,19 @@ Everything is configured through environment variables (see [`.env.example`](.en
 | Persistent database | `DB_CONNECTION=pgsql` and `DB_URL` (e.g. Render PostgreSQL) |
 | Receipts & photos that survive deploys | `DOCUMENTS_DISK=s3`, `PHOTOS_DISK=s3-public` and the `AWS_*` keys (S3 or Cloudflare R2; set `AWS_ENDPOINT` and `AWS_PUBLIC_URL` for R2) |
 | Real email (shop verification needs it) | Any SMTP provider, e.g. Resend: `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.resend.com`, `MAIL_PORT=465`, `MAIL_SCHEME=smtps`, `MAIL_USERNAME=resend`, `MAIL_PASSWORD=<api key>` |
-| Reminders and recall checks | Run `php artisan schedule:run` every minute (a Render Cron Job using the same image) |
-| Turn off the demo | `DEMO_MODE=false` |
+| Emails, reminders, recall checks, expiry | Built in: the image runs a queue worker and the scheduler (`QUEUE_CONNECTION=database`). Running several web containers? Keep `RUN_SCHEDULER=true` on all of them (jobs take a lock) or on just one |
+| Custom domain | Keep `APP_URL` on the main domain and list other hostnames in `TRUSTED_HOSTS` |
+| Turn off the demo | `DEMO_MODE=false` and `DEMO_NIGHTLY_RESET=false` |
 
 ### Any Docker host
 
 ```bash
 docker build -t beast-mode-motors .
 docker run -p 8080:8080 -e APP_KEY=base64:... -e APP_URL=http://localhost:8080 \
-  -e DEMO_MODE=true -e QUEUE_CONNECTION=sync -e MAIL_MAILER=log beast-mode-motors
+  -e DEMO_MODE=true -e MAIL_MAILER=log beast-mode-motors
 ```
 
-The image is a multi-stage build: Vite assets, then `composer install --no-dev`, then Nginx + PHP-FPM with OPcache. On start it migrates, links storage and caches config. Run `php artisan schedule:work` (or a cron calling `schedule:run`) for reminders and recall checks.
+The image is a multi-stage build: Vite assets, then `composer install --no-dev`, then Nginx + PHP-FPM with OPcache. On start it migrates, links storage and caches config. A queue worker (emails and in-app notifications, retried on failure) and the scheduler (reminders, recall checks, offer and request expiry) run in the same container under s6. If you run them elsewhere instead, set `RUN_QUEUE_WORKER=false` / `RUN_SCHEDULER=false`. The app only answers to `APP_URL`'s host and its subdomains: add any other names, such as an apex domain or the platform's own hostname, to `TRUSTED_HOSTS`.
 
 ## Architecture notes
 

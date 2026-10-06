@@ -5,12 +5,12 @@ namespace App\Notifications;
 use App\Models\Reminder;
 use App\Models\Vehicle;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 
-class MaintenanceDue extends Notification implements ShouldQueue
+class MaintenanceDue extends Notification implements ShouldQueueAfterCommit
 {
     use Queueable;
 

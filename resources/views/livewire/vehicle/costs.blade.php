@@ -92,10 +92,12 @@
                             <div>
                                 <label class="label" for="volume">Volume ({{ $unit }})</label>
                                 <input id="volume" inputmode="decimal" wire:model="volume" class="input num">
+                                @error('volume') <p class="error">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label class="label" for="odometer">Odometer</label>
                                 <input id="odometer" type="number" wire:model="odometer" class="input num">
+                                @error('odometer') <p class="error">{{ $message }}</p> @enderror
                             </div>
                         </div>
                         <p class="hint -mt-2">Fill the tank each time and add the odometer to track real-world {{ $unit === 'gal' ? 'mpg' : 'efficiency' }}.</p>
@@ -103,6 +105,7 @@
                     <div>
                         <label class="label" for="notes">Note</label>
                         <input id="notes" wire:model="notes" class="input" placeholder="optional">
+                        @error('notes') <p class="error">{{ $message }}</p> @enderror
                     </div>
                 </div>
                 <button class="btn-primary mt-6 w-full">Add</button>

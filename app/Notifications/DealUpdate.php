@@ -4,14 +4,14 @@ namespace App\Notifications;
 
 use App\Models\Deal;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * Something happened in a deal room: a message, an offer, an agreement, a completed sale…
  */
-class DealUpdate extends Notification implements ShouldQueue
+class DealUpdate extends Notification implements ShouldQueueAfterCommit
 {
     use Queueable;
 

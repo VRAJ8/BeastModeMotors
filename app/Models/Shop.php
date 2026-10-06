@@ -99,6 +99,14 @@ class Shop extends Model
     }
 
     /**
+     * @return HasMany<ServiceRecord, $this>
+     */
+    public function verifiedRecords(): HasMany
+    {
+        return $this->hasMany(ServiceRecord::class)->whereNotNull('verified_at');
+    }
+
+    /**
      * Email with the local part hidden, for owners picking a shop from the directory.
      */
     public function maskedEmail(): string
@@ -122,13 +130,16 @@ class Shop extends Model
     {
         $verifications = $this->relationLoaded('verifications') ? $this->verifications : $this->verifications()->get();
         $answered = $verifications->whereIn('status', [VerificationStatus::Confirmed, VerificationStatus::Disputed]);
-        $unanswered = $verifications->where('status', VerificationStatus::Expired);
+        // A request past its deadline is unanswered whether or not housekeeping has marked it yet.
+        $unanswered = $verifications->filter(fn (ShopVerification $v) => $v->status === VerificationStatus::Expired
+            || ($v->status === VerificationStatus::Pending && $v->expires_at->isPast()));
 
         $hours = $answered->map(fn (ShopVerification $v) => $v->created_at->diffInMinutes($v->responded_at) / 60)->sort()->values();
         $median = $hours->isEmpty() ? null : round($hours->median(), 1);
         $closed = $answered->count() + $unanswered->count();
 
-        $vehicles = Vehicle::whereIn('id', ServiceRecord::where('shop_id', $this->getKey())->whereNotNull('verified_at')->select('vehicle_id'))->get(['id', 'make']);
+        $records = $this->relationLoaded('verifiedRecords') ? $this->verifiedRecords : $this->verifiedRecords()->with('vehicle:id,make')->get();
+        $vehicles = $records->pluck('vehicle')->filter()->unique('id');
 
         return [
             'confirmed' => $answered->where('status', VerificationStatus::Confirmed)->count(),

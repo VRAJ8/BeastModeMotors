@@ -12,6 +12,7 @@ use App\Support\UsStates;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -51,10 +52,17 @@ class Sell extends Component
 
     public function updatedPhotos(): void
     {
-        $this->validate([
-            'photos' => ['array', 'max:12'],
-            'photos.*' => ['image', 'max:'.config('passport.max_upload_kb')],
-        ]);
+        try {
+            $this->validate([
+                'photos' => ['array', 'max:12'],
+                'photos.*' => ['image', 'max:'.config('passport.max_upload_kb')],
+            ]);
+        } catch (ValidationException $e) {
+            // A rejected file would otherwise stay in the queue and fail every later upload.
+            $this->photos = [];
+
+            throw $e;
+        }
 
         $position = (int) $this->vehicle->photos()->max('position');
 

@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use App\Models\Document;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class DocumentExpiring extends Notification implements ShouldQueue
+class DocumentExpiring extends Notification implements ShouldQueueAfterCommit
 {
     use Queueable;
 

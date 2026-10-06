@@ -20,9 +20,12 @@ class ShopController extends Controller
 
         $shops = Shop::directory()
             ->withCount(['verifications as confirmed_count' => fn ($q) => $q->where('status', VerificationStatus::Confirmed)])
+            // Everything each card's track record needs, in two queries for the whole page.
+            ->with(['verifications:id,shop_id,status,created_at,responded_at,expires_at', 'verifiedRecords:id,shop_id,vehicle_id', 'verifiedRecords.vehicle:id,make'])
             ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w->whereLike('name', "%{$search}%")->orWhereLike('city', "%{$search}%")))
             ->when(isset(UsStates::ALL[$state]), fn ($q) => $q->where('state', $state))
             ->orderByDesc('confirmed_count')
+            ->orderBy('id')
             ->paginate(12)
             ->withQueryString();
 

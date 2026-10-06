@@ -4,11 +4,13 @@ namespace App\Filament\Resources\Users;
 
 use App\Filament\Resources\Users\Pages\ManageUsers;
 use App\Models\User;
+use App\Services\AccountDeletion;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -17,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class UserResource extends Resource
 {
@@ -64,7 +67,19 @@ class UserResource extends Resource
             ->recordActions([
                 // The demo publishes its staff login, so accounts are read-only there.
                 EditAction::make()->using(fn (User $record, array $data) => static::save($record, $data))->hidden(fn () => static::demo()),
-                DeleteAction::make()->hidden(fn (User $record) => static::demo() || $record->is(Auth::user())),
+                DeleteAction::make()->hidden(fn (User $record) => static::demo() || $record->is(Auth::user()))
+                    ->modalDescription('Cars with history from other owners stay registered without an owner; everything else this person added is deleted.')
+                    ->using(function (User $record) {
+                        try {
+                            app(AccountDeletion::class)->delete($record);
+                        } catch (ValidationException $e) {
+                            Notification::make()->title(collect($e->errors())->flatten()->first())->danger()->send();
+
+                            return false;
+                        }
+
+                        return true;
+                    }),
             ]);
     }
 

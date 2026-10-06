@@ -63,4 +63,28 @@ class Garage
             return $vehicle;
         });
     }
+
+    /**
+     * Staff hand a passport with no owner (its last owner deleted their account) to the person who showed
+     * the paperwork. They become its next owner and inherit its history, as after a sale.
+     */
+    public function claim(Vehicle $vehicle, User $user): void
+    {
+        DB::transaction(function () use ($vehicle, $user) {
+            $vehicle = Vehicle::whereKey($vehicle->getKey())->lockForUpdate()->firstOrFail();
+            abort_unless($vehicle->user_id === null, 422, 'This passport already has an owner.');
+
+            $vehicle->ownerships()->create([
+                'user_id' => $user->getKey(),
+                'owner_number' => ($vehicle->ownerships()->max('owner_number') ?? 0) + 1,
+                'acquired_via' => AcquiredVia::Other,
+                'started_on' => now()->toDateString(),
+                'start_mileage' => $vehicle->current_mileage,
+            ]);
+
+            $vehicle->reminders()->update(['notified_at' => null]);
+            $vehicle->documents()->update(['expiry_notified_at' => null]);
+            $vehicle->update(['user_id' => $user->getKey()]);
+        });
+    }
 }

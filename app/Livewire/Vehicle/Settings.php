@@ -61,6 +61,7 @@ class Settings extends Component
 
     public function delete()
     {
+        $this->confirmVin = strtoupper(trim($this->confirmVin));
         $this->validate(['confirmVin' => ['required', Rule::in([substr($this->vehicle->vin, -6)])]], [
             'confirmVin.in' => 'Type the last six characters of the VIN to confirm.',
         ]);

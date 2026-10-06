@@ -55,6 +55,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+     | Extra hostnames the app answers to besides APP_URL's host and its subdomains (password-reset links are
+     | built from the request's host, so anything else is refused). Comma-separated, e.g. an apex domain or the
+     | platform hostname its health checks use.
+     */
+    'trusted_hosts' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('TRUSTED_HOSTS', ''))))),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

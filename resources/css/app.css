@@ -4,8 +4,8 @@
 @import '@fontsource-variable/jetbrains-mono';
 @plugin '@tailwindcss/forms';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/* Pagination views are published to resources/views/vendor, so everything Tailwind needs lives in the repo
+   (the Docker asset build has no vendor/ or compiled views to scan). */
 @source '../**/*.blade.php';
 @source '../**/*.js';
 @source '../../app/**/*.php';

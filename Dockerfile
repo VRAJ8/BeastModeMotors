@@ -9,6 +9,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY vite.config.js ./
 COPY resources ./resources
+# Tailwind also scans class names used in PHP (badges, tones, Filament-free helpers).
+COPY app ./app
 RUN npm run build
 
 ############################################
@@ -36,7 +38,8 @@ ENV PHP_OPCACHE_ENABLE=1 \
     AUTORUN_LARAVEL_STORAGE_LINK=true \
     APP_ENV=production \
     APP_DEBUG=false \
-    LOG_CHANNEL=stderr
+    LOG_CHANNEL=stderr \
+    QUEUE_CONNECTION=database
 
 WORKDIR /var/www/html
 
@@ -54,6 +57,11 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative --no-scr
 
 # Seeds the demo showroom on first boot when DEMO_MODE=true (runs after migrations).
 COPY --chmod=755 docker/entrypoint.d/60-demo-seed.sh /etc/entrypoint.d/60-demo-seed.sh
+
+# A queue worker (emails, in-app notifications) and the scheduler (reminders, recalls, expiry) run next to
+# Nginx and PHP-FPM under s6. Turn either off with RUN_QUEUE_WORKER=false / RUN_SCHEDULER=false.
+COPY --chmod=755 docker/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+RUN touch /etc/s6-overlay/s6-rc.d/user/contents.d/laravel-queue /etc/s6-overlay/s6-rc.d/user/contents.d/laravel-scheduler
 
 USER www-data
 

@@ -6,9 +6,12 @@ use App\Enums\DealStatus;
 use App\Enums\FuelType;
 use App\Filament\Resources\Vehicles\Pages\ManageVehicles;
 use App\Models\Deal;
+use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Garage;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
@@ -42,7 +45,7 @@ class VehicleResource extends Resource
                 TextColumn::make('model')->label('Car')->formatStateUsing(fn (Vehicle $record) => $record->fullTitle())->searchable(['make', 'model', 'vin'])->description(fn (Vehicle $record) => $record->vin),
                 IconColumn::make('vin_valid')->label('VIN ok')->boolean(),
                 TextColumn::make('decode_source')->label('Decoded by')->badge()->color('gray'),
-                TextColumn::make('owner.name')->label('Owner')->searchable(),
+                TextColumn::make('owner.name')->label('Owner')->searchable()->placeholder('No owner — awaiting claim'),
                 TextColumn::make('current_mileage')->label('Miles')->numeric()->sortable(),
                 TextColumn::make('records_count')->label('Records')->sortable(),
                 TextColumn::make('ownerships_count')->label('Owners'),
@@ -54,6 +57,18 @@ class VehicleResource extends Resource
                 TernaryFilter::make('vin_valid')->label('VIN passes check digit'),
             ])
             ->recordActions([
+                Action::make('assign')
+                    ->label('Assign owner')
+                    ->icon('heroicon-o-user-plus')
+                    ->visible(fn (Vehicle $record) => $record->user_id === null)
+                    ->schema([
+                        TextInput::make('email')->label('New owner\'s account email')->email()->required()->exists('users', 'email'),
+                    ])
+                    ->modalDescription('Only after checking their title or registration. They become the next owner and inherit the car\'s history.')
+                    ->action(function (Vehicle $record, array $data) {
+                        app(Garage::class)->claim($record, User::where('email', $data['email'])->firstOrFail());
+                        Notification::make()->title('Passport assigned')->success()->send();
+                    }),
                 Action::make('release')
                     ->label('Release VIN')
                     ->icon('heroicon-o-lock-open')

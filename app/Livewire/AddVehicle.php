@@ -89,9 +89,11 @@ class AddVehicle extends Component
         if ($existing = Vehicle::where('vin', $this->vin)->first()) {
             $mine = $existing->user_id === Auth::id();
             $this->contested = $mine ? null : $this->vin;
-            $this->addError('vin', $mine
-                ? 'This car is already in your garage.'
-                : 'This car already has a passport with another owner. If you bought it privately, ask the seller to transfer it to you through a deal so its history comes with it.');
+            $this->addError('vin', match (true) {
+                $mine => 'This car is already in your garage.',
+                $existing->user_id === null => 'This car already has a passport, and it\'s waiting for its next owner. If that\'s you, request a review below and we\'ll check your paperwork and hand it over, history included.',
+                default => 'This car already has a passport with another owner. If you bought it privately, ask the seller to transfer it to you through a deal so its history comes with it.',
+            });
 
             return;
         }

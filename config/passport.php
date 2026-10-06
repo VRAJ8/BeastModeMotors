@@ -23,6 +23,9 @@ return [
 
     'demo' => (bool) env('DEMO_MODE', false),
 
+    // Rebuild the demo (database and uploads) every night at 04:00. Only for a public demo deploy.
+    'demo_nightly_reset' => (bool) env('DEMO_NIGHTLY_RESET', false),
+
     /*
     |--------------------------------------------------------------------------
     | NHTSA (US Department of Transportation) open data

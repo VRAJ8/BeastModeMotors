@@ -19,6 +19,9 @@ class PlatformStats extends StatsOverviewWidget
 {
     protected static ?int $sort = 1;
 
+    // These are trend numbers, not a live feed: refresh once a minute rather than Filament's default 5s.
+    protected ?string $pollingInterval = '60s';
+
     protected function getStats(): array
     {
         $records = ServiceRecord::count();
@@ -26,8 +29,12 @@ class PlatformStats extends StatsOverviewWidget
         $answered = ShopVerification::whereIn('status', [VerificationStatus::Confirmed, VerificationStatus::Disputed])->count();
         $asked = ShopVerification::count();
 
+        // One range query (index-friendly), bucketed by day in PHP, instead of fourteen date() scans.
+        $since = now()->subDays(13)->startOfDay();
+        $perDay = ServiceRecord::where('created_at', '>=', $since)->pluck('created_at')
+            ->countBy(fn ($createdAt) => $createdAt->toDateString());
         $dailyRecords = collect(range(13, 0))
-            ->map(fn (int $daysAgo) => ServiceRecord::whereDate('created_at', now()->subDays($daysAgo)->toDateString())->count())
+            ->map(fn (int $daysAgo) => $perDay->get(now()->subDays($daysAgo)->toDateString(), 0))
             ->all();
 
         return [

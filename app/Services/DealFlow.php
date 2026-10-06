@@ -74,10 +74,11 @@ class DealFlow
 
         $deal->touch();
 
-        $deal->counterparty($author)->notify(new DealUpdate(
+        $this->tell($deal->counterparty($author), new DealUpdate(
             $deal,
             "New message from {$author->publicName()} about the {$deal->vehicle->title()}",
-            str($body)->limit(140)->toString(),
+            // A flagged message is only shown in the room, next to the scam shield's warning.
+            $flags ? 'Open the deal room to read it — our scam shield flagged something in it.' : str($body)->limit(140)->toString(),
             email: false,
         ));
 
@@ -118,7 +119,7 @@ class DealFlow
             $this->system($deal, ucfirst($role)." {$verb} ".money($amountCents).'.');
             $this->quote($deal, $author, $note);
 
-            $deal->counterparty($author)->notify(new DealUpdate(
+            $this->tell($deal->counterparty($author), new DealUpdate(
                 $deal,
                 "{$author->publicName()} {$verb} ".money($amountCents)." for the {$deal->vehicle->title()}",
                 'The offer is open for '.self::OFFER_HOURS.' hours.',
@@ -149,7 +150,7 @@ class DealFlow
             });
 
             $this->system($deal, ucfirst($deal->roleOf($responder)).' declined the offer of '.money($offer->amount_cents).'.');
-            $offer->user->notify(new DealUpdate($deal, 'Your offer of '.money($offer->amount_cents).' was declined', 'You can make another offer in the deal room.', tone: 'danger'));
+            $this->tell($offer->user, new DealUpdate($deal, 'Your offer of '.money($offer->amount_cents).' was declined', 'You can make another offer in the deal room.', tone: 'danger'));
 
             return;
         }
@@ -183,7 +184,7 @@ class DealFlow
         });
 
         foreach ([$deal->buyer, $deal->seller] as $user) {
-            $user->notify(new DealUpdate($deal, "Price agreed: {$deal->vehicle->title()} for ".money($offer->amount_cents), 'Book an inspection and work through the handover checklist together.', tone: 'success'));
+            $this->tell($user, new DealUpdate($deal, "Price agreed: {$deal->vehicle->title()} for ".money($offer->amount_cents), 'Book an inspection and work through the handover checklist together.', tone: 'success'));
         }
     }
 
@@ -214,7 +215,8 @@ class DealFlow
             $this->quote($deal, $user, $reason);
         });
 
-        $deal->counterparty($user)->notify(new DealUpdate($deal, "{$user->publicName()} cancelled the deal for the {$deal->vehicle->title()}", $reason, tone: 'danger'));
+        // Their words stay in the deal room, where the scam shield can flag them; the email only points there.
+        $this->tell($deal->counterparty($user), new DealUpdate($deal, "{$user->publicName()} cancelled the deal for the {$deal->vehicle->title()}", $reason ? 'Their reason is in the deal room.' : null, tone: 'danger'));
     }
 
     public function toggleHandover(Deal $deal, User $user, string $key): void
@@ -294,7 +296,7 @@ class DealFlow
             return true;
         }
 
-        $deal->counterparty($user)->notify(new DealUpdate($deal, "{$user->publicName()} confirmed the handover", 'Confirm on your side to complete the sale and transfer the passport.'));
+        $this->tell($deal->counterparty($user), new DealUpdate($deal, "{$user->publicName()} confirmed the handover", 'Confirm on your side to complete the sale and transfer the passport.'));
 
         return false;
     }
@@ -351,10 +353,18 @@ class DealFlow
                 $other->offers()->where('status', OfferStatus::Pending)->update(['status' => OfferStatus::Withdrawn]);
                 $this->system($other, $reason.'.');
 
-                DB::afterCommit(fn () => $other->buyer->exists
-                    ? $other->buyer->notify(new DealUpdate($other, "Your deal for the {$other->vehicle->title()} was closed", $reason, tone: 'danger'))
-                    : null);
+                DB::afterCommit(fn () => $this->tell($other->buyer, new DealUpdate($other, "Your deal for the {$other->vehicle->title()} was closed", $reason, tone: 'danger')));
             });
+    }
+
+    /**
+     * Notify a party to the deal, unless their account has since been deleted.
+     */
+    private function tell(User $user, DealUpdate $update): void
+    {
+        if ($user->exists) {
+            $user->notify($update);
+        }
     }
 
     public function system(Deal $deal, string $body): DealMessage

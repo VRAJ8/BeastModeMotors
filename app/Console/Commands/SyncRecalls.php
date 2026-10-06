@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Vehicle;
 use App\Services\RecallSync;
 use Illuminate\Console\Command;
+use Throwable;
 
 class SyncRecalls extends Command
 {
@@ -21,7 +22,13 @@ class SyncRecalls extends Command
             ->when(! $this->option('force'), fn ($q) => $q->where(fn ($q) => $q->whereNull('recalls_checked_at')->orWhere('recalls_checked_at', '<', now()->subDays(6))))
             ->chunkById(50, function ($vehicles) use ($sync, &$found, &$failed) {
                 foreach ($vehicles as $vehicle) {
-                    $new = $sync->sync($vehicle);
+                    try {
+                        $new = $sync->sync($vehicle);
+                    } catch (Throwable $e) {
+                        report($e);
+                        $new = null;
+                    }
+
                     $new === null ? $failed++ : $found += $new->count();
                 }
             });

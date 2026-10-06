@@ -5,11 +5,11 @@ namespace App\Notifications;
 use App\Enums\VerificationStatus;
 use App\Models\ShopVerification;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class VerificationAnswered extends Notification implements ShouldQueue
+class VerificationAnswered extends Notification implements ShouldQueueAfterCommit
 {
     use Queueable;
 

@@ -200,7 +200,7 @@ class RecordForm extends Component
             'items' => ['array', 'max:30'],
             'items.*.description' => ['required', 'string', 'max:120'],
             'items.*.kind' => ['required', 'in:part,labor,fee'],
-            'items.*.amount' => ['required', 'numeric', 'min:0'],
+            'items.*.amount' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'reminderIds' => ['array'],
             'receipts' => ['array', 'max:8'],
             'receipts.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic', 'max:'.config('passport.max_upload_kb')],
@@ -208,6 +208,9 @@ class RecordForm extends Component
             'performed_on.after_or_equal' => 'That\'s before the car was built.',
             'provider_name.required' => 'Who did the work?',
             'items.*.description.required' => 'Describe this line.',
+            'items.*.amount.required' => 'Enter an amount (0 is fine).',
+            'items.*.amount.numeric' => 'Enter an amount like 129.95.',
+            'items.*.amount.max' => 'That\'s more than $1,000,000 for one line.',
             'receipts.*.mimes' => 'Receipts must be PDFs or photos.',
         ]);
 

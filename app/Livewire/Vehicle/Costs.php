@@ -18,6 +18,8 @@ class Costs extends Component
 {
     use ManagesVehicle, WithPagination;
 
+    private const PER_PAGE = 10;
+
     #[Locked]
     public Vehicle $vehicle;
 
@@ -71,6 +73,14 @@ class Costs extends Component
             ->whereKey($id)
             ->firstOrFail()
             ->delete();
+
+        // Deleting the last expense on the last page would otherwise leave an empty page with no way back.
+        $remaining = $this->vehicle->expenses()->where('ownership_id', $this->vehicle->currentOwnership->getKey())->count();
+        $lastPage = max(1, (int) ceil($remaining / self::PER_PAGE));
+
+        if ($this->getPage() > $lastPage) {
+            $this->setPage($lastPage);
+        }
     }
 
     public function render(CostReport $report)
@@ -80,7 +90,7 @@ class Costs extends Component
         return view('livewire.vehicle.costs', [
             'report' => $report->for($ownership),
             'ownership' => $ownership,
-            'expenses' => $this->vehicle->expenses()->where('ownership_id', $ownership->getKey())->paginate(10),
+            'expenses' => $this->vehicle->expenses()->where('ownership_id', $ownership->getKey())->paginate(self::PER_PAGE),
             'categories' => ExpenseCategory::options(),
             'unit' => ExpenseCategory::tryFrom($this->category)?->volumeUnit(),
             'labels' => ['maintenance' => 'Maintenance & repairs'] + ExpenseCategory::options(),

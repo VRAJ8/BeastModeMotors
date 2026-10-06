@@ -20,6 +20,7 @@
                 </label>
             </div>
             <div wire:loading wire:target="photos" class="mt-3 text-xs text-muted">Uploading…</div>
+            @error('photos') <p class="error">{{ $message }}</p> @enderror
             @error('photos.*') <p class="error">{{ $message }}</p> @enderror
             @if ($gallery->isEmpty())
                 <p class="mt-4 rounded-xl border border-dashed border-line-strong py-10 text-center text-sm text-muted">No photos yet.</p>
@@ -88,7 +89,7 @@
             <div class="mt-6 flex flex-wrap justify-end gap-2">
                 <button class="btn-secondary">Save {{ $listing && $listing->status !== \App\Enums\ListingStatus::Draft ? 'changes' : 'draft' }}</button>
                 @if (! $listing || $listing->status === \App\Enums\ListingStatus::Draft)
-                    <button type="button" wire:click="publish" class="btn-accent" @disabled($blockers)>Publish listing</button>
+                    <button type="button" wire:click="publish" class="btn-accent">Publish listing</button>
                 @endif
             </div>
         </form>

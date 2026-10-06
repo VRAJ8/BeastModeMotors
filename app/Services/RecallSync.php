@@ -6,6 +6,7 @@ use App\Models\Recall;
 use App\Models\Vehicle;
 use App\Notifications\RecallsFound;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class RecallSync
 {
@@ -24,19 +25,24 @@ class RecallSync
             return null;
         }
 
-        $known = $vehicle->recalls()->pluck('campaign_number')->all();
+        // The first successful check finds every campaign ever issued for the model: those aren't news.
+        $notify = $notify && $vehicle->recalls_checked_at !== null;
 
-        $new = collect($results)
-            ->reject(fn (array $row) => in_array($row['campaign_number'], $known, true))
-            ->map(fn (array $row) => $vehicle->recalls()->create($row))
-            ->values();
+        return DB::transaction(function () use ($vehicle, $results, $notify) {
+            $known = $vehicle->recalls()->pluck('campaign_number')->all();
 
-        $vehicle->forceFill(['recalls_checked_at' => now()])->saveQuietly();
+            $new = collect($results)
+                ->reject(fn (array $row) => in_array($row['campaign_number'], $known, true))
+                ->map(fn (array $row) => $vehicle->recalls()->create($row))
+                ->values();
 
-        if ($notify && $new->isNotEmpty() && $vehicle->owner) {
-            $vehicle->owner->notify(new RecallsFound($vehicle, $new));
-        }
+            $vehicle->forceFill(['recalls_checked_at' => now()])->saveQuietly();
 
-        return $new;
+            if ($notify && $new->isNotEmpty() && $vehicle->owner) {
+                $vehicle->owner->notify(new RecallsFound($vehicle, $new));
+            }
+
+            return $new;
+        });
     }
 }

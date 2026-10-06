@@ -120,6 +120,7 @@
                                 <button type="button" wire:click="removeItem({{ $i }})" class="rounded-lg p-2.5 text-muted hover:bg-paper hover:text-danger" title="Remove"><x-heroicon-m-x-mark class="size-4" /></button>
                             @endunless
                         </div>
+                        @error("items.$i.amount") <p class="error -mt-1 text-right">{{ $message }}</p> @enderror
                     @endforeach
                     <p class="pt-2 text-right text-sm">Total <span class="num font-semibold">{{ money($this->itemsTotal) }}</span></p>
                 </div>

@@ -57,7 +57,9 @@ it('finds new recalls each week and tells the owner', function () {
     Http::fake(['api.nhtsa.gov/*' => Http::response(['results' => [
         ['NHTSACampaignNumber' => '24V100000', 'Component' => 'AIR BAGS', 'Summary' => 'May not deploy.', 'ReportReceivedDate' => '01/02/2024'],
     ]])]);
+    // Checked once already (when it was added), so a campaign appearing now is news.
     $vehicle = car();
+    $vehicle->forceFill(['recalls_checked_at' => now()->subWeek()])->save();
 
     $this->artisan('passport:sync-recalls')->assertSuccessful();
     $this->artisan('passport:sync-recalls --force')->assertSuccessful();

@@ -87,7 +87,8 @@ class Deal extends Model
      */
     public function pendingOffer(): HasOne
     {
-        return $this->hasOne(Offer::class)->where('status', OfferStatus::Pending)->latestOfMany();
+        // Past its deadline an offer is dead, whether or not housekeeping has marked it expired yet.
+        return $this->hasOne(Offer::class)->where('status', OfferStatus::Pending)->where('expires_at', '>', now())->latestOfMany();
     }
 
     /**

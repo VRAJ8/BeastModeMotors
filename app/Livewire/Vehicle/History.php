@@ -11,6 +11,7 @@ use App\Models\Shop;
 use App\Models\Vehicle;
 use App\Services\ShopVerifier;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -64,7 +65,12 @@ class History extends Component
             'shopEmail' => [$shop ? 'nullable' : 'required', 'email', 'max:255'],
         ], [], ['shopName' => 'shop name', 'shopEmail' => 'shop email']);
 
-        $verifier->request($this->findRecord($this->verifyingId), Auth::user(), $shop->name ?? $this->shopName, $shop->email ?? $this->shopEmail);
+        try {
+            $verifier->request($this->findRecord($this->verifyingId), Auth::user(), $shop->name ?? $this->shopName, $shop->email ?? $this->shopEmail);
+        } catch (ValidationException $e) {
+            // The verifier speaks in model terms; show its messages under the field the dialog has.
+            throw ValidationException::withMessages(['shopEmail' => $e->validator->errors()->all()]);
+        }
 
         $this->reset('verifyingId', 'shopName', 'shopEmail', 'shopId');
         $this->dispatch('toast', message: 'Sent. The shop has 14 days to confirm.');
@@ -105,7 +111,7 @@ class History extends Component
     public function render()
     {
         $records = $this->vehicle->records()
-            ->withCount('documents')
+            ->withCount(['documents', 'verifications'])
             ->with(['documents', 'pendingVerification', 'ownership', 'verifications' => fn ($q) => $q->with('shop')->latest()->limit(1)])
             ->when($this->category, fn ($q) => $q->where('category', $this->category))
             ->get()

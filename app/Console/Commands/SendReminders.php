@@ -8,6 +8,7 @@ use App\Models\Vehicle;
 use App\Notifications\DocumentExpiring;
 use App\Notifications\MaintenanceDue;
 use Illuminate\Console\Command;
+use Throwable;
 
 class SendReminders extends Command
 {
@@ -25,8 +26,7 @@ class SendReminders extends Command
                 $due = $vehicle->reminders->filter(fn (Reminder $r) => in_array($r->status($vehicle->current_mileage), [Reminder::OVERDUE, Reminder::DUE_SOON], true)
                     && ($r->notified_at === null || $r->notified_at->lt(now()->subDays(30))));
 
-                if ($due->isNotEmpty() && $vehicle->owner) {
-                    $vehicle->owner->notify(new MaintenanceDue($vehicle, $due->values()));
+                if ($due->isNotEmpty() && $vehicle->owner && $this->send(fn () => $vehicle->owner->notify(new MaintenanceDue($vehicle, $due->values())))) {
                     Reminder::whereKey($due->modelKeys())->update(['notified_at' => now()]);
                     $maintenance++;
                 }
@@ -39,13 +39,27 @@ class SendReminders extends Command
             ->where('expires_on', '>=', now()->subDays(7))
             ->whereNull('expiry_notified_at')
             ->get()
-            ->each(function (Document $document) {
-                $document->vehicle->owner?->notify(new DocumentExpiring($document));
-                $document->update(['expiry_notified_at' => now()]);
-            });
+            ->filter(fn (Document $document) => $document->vehicle->owner && $this->send(fn () => $document->vehicle->owner->notify(new DocumentExpiring($document))))
+            ->each(fn (Document $document) => $document->update(['expiry_notified_at' => now()]));
 
         $this->components->info("Maintenance emails: {$maintenance}. Expiry emails: {$documents->count()}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * One bad address must not stop everyone else's reminders; it's retried tomorrow.
+     */
+    private function send(callable $notify): bool
+    {
+        try {
+            $notify();
+
+            return true;
+        } catch (Throwable $e) {
+            report($e);
+
+            return false;
+        }
     }
 }
