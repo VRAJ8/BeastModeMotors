@@ -35,8 +35,8 @@ class DealUpdate extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject($this->title)
-            ->line($this->title.'.')
-            ->when($this->body, fn (MailMessage $mail) => $mail->line($this->body))
+            ->line(md($this->title).'.')
+            ->when($this->body, fn (MailMessage $mail) => $mail->line(md($this->body)))
             ->action('Open the deal room', route('deals.show', $this->deal))
             ->line('Keep payments and paperwork inside the deal room so you both have a record.');
     }

@@ -39,8 +39,8 @@ class History extends Component
         $record = $this->findRecord($recordId);
         $this->verifyingId = $record->getKey();
         $this->shopName = (string) $record->provider_name;
-        $this->shopEmail = (string) $record->provider_email;
-        $this->shopId = $record->shop_id;
+        $this->shopId = null;
+        $this->shopEmail = $this->adoptKnownShop($record->provider_email);
         $this->resetErrorBag();
     }
 

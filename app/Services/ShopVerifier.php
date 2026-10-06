@@ -11,6 +11,7 @@ use App\Notifications\VerificationAnswered;
 use App\Notifications\VerifyServiceRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -31,6 +32,16 @@ class ShopVerifier
         if (strcasecmp($shopEmail, $owner->email) === 0) {
             throw ValidationException::withMessages(['shop_email' => 'Use the shop\'s email address, not your own.']);
         }
+
+        // Verification emails go to addresses we don't control: cap how many any owner, or any inbox, can trigger.
+        foreach (['verify-owner:'.$owner->getKey() => 10, 'verify-shop:'.strtolower($shopEmail) => 5] as $key => $perDay) {
+            if (RateLimiter::tooManyAttempts($key, $perDay)) {
+                throw ValidationException::withMessages(['shop_email' => 'Too many verification requests today. Try again tomorrow.']);
+            }
+        }
+
+        RateLimiter::hit('verify-owner:'.$owner->getKey(), 86400);
+        RateLimiter::hit('verify-shop:'.strtolower($shopEmail), 86400);
 
         $verification = $record->verifications()->create([
             'requested_by' => $owner->getKey(),

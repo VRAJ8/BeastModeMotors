@@ -2,6 +2,10 @@
     <h1 class="display text-2xl">Start your car's passport</h1>
     <p class="mt-1 mb-6 text-sm text-muted">Free for owners. Already have an account? <a href="{{ route('login') }}" class="link">Sign in</a></p>
 
+    @if (config('passport.demo'))
+        <p class="mb-6 rounded-xl border border-warn/30 bg-warn-soft p-3 text-sm text-warn">This is a public demo: the staff login is published and everything is wiped nightly. Use a made-up name and email, and don't upload anything personal.</p>
+    @endif
+
     <form method="POST" action="{{ route('register') }}">
         @csrf
 

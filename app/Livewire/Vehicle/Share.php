@@ -51,13 +51,21 @@ class Share extends Component
 
     public function revoke(int $id): void
     {
-        $this->vehicle->shareLinks()->whereKey($id)->firstOrFail()->update(['revoked_at' => now()]);
+        $this->ownLinks()->whereKey($id)->firstOrFail()->update(['revoked_at' => now()]);
         $this->dispatch('toast', message: 'Link revoked — it stops working immediately.');
+    }
+
+    /**
+     * Links made by the current owner. A previous owner's links (revoked at sale) are none of the new owner's business.
+     */
+    private function ownLinks()
+    {
+        return $this->vehicle->shareLinks()->where('created_by', Auth::id());
     }
 
     public function render()
     {
-        $links = $this->vehicle->shareLinks()->get();
+        $links = $this->ownLinks()->get();
         $qrLink = $links->firstWhere('id', $this->qrFor);
 
         return view('livewire.vehicle.share', [

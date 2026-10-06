@@ -12,6 +12,7 @@ use App\Models\Shop;
 use App\Models\Vehicle;
 use App\Services\MaintenancePlanner;
 use App\Services\ShopVerifier;
+use App\Support\ImageMetadata;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -78,14 +79,14 @@ class RecordForm extends Component
                 'cost' => $record->cost_cents ? number_format($record->cost_cents / 100, 2, '.', '') : '',
                 'provider_type' => $record->provider_type->value,
                 'provider_name' => (string) $record->provider_name,
-                'provider_email' => (string) $record->provider_email,
+                'provider_email' => $this->adoptKnownShop($record->provider_email),
                 'description' => (string) $record->description,
                 'items' => collect($record->line_items ?? [])->map(fn ($i) => [
                     'description' => $i['description'],
                     'kind' => $i['kind'],
                     'amount' => number_format($i['amount_cents'] / 100, 2, '.', ''),
                 ])->all(),
-                'reminderIds' => $vehicle->reminders->whereIn('task', $record->tasks ?? [])->modelKeys(),
+                'reminderIds' => array_values($vehicle->reminders->whereIn('task', $record->tasks ?? [])->modelKeys()),
                 'requestVerification' => false,
             ]);
 
@@ -207,7 +208,8 @@ class RecordForm extends Component
             throw ValidationException::withMessages(['mileage' => 'This is lower than an earlier reading. Tick the box to confirm it\'s correct.']);
         }
 
-        $shop = $this->pickedShop;
+        $diy = $this->provider_type === ProviderType::Diy->value;
+        $shop = $diy ? null : $this->pickedShop;
 
         $facts = [
             'category' => $this->category,
@@ -221,8 +223,8 @@ class RecordForm extends Component
                 'amount_cents' => to_cents($i['amount']),
             ])->all() : null,
             'provider_type' => $this->provider_type,
-            'provider_name' => $this->provider_name ?: null,
-            'provider_email' => $shop->email ?? ($this->provider_email ?: null),
+            'provider_name' => $diy ? null : ($this->provider_name ?: null),
+            'provider_email' => $diy ? null : ($shop->email ?? ($this->provider_email ?: null)),
         ];
 
         if ($this->record) {
@@ -244,7 +246,7 @@ class RecordForm extends Component
                 'uploaded_by' => Auth::id(),
                 'type' => DocumentType::Receipt,
                 'name' => str($file->getClientOriginalName())->beforeLast('.')->limit(150)->toString() ?: 'Receipt',
-                'path' => $file->store("vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
+                'path' => ImageMetadata::storeClean($file, "vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
                 'mime' => $file->getMimeType(),
                 'size' => $file->getSize(),
             ]);

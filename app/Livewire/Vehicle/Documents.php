@@ -5,6 +5,7 @@ namespace App\Livewire\Vehicle;
 use App\Enums\DocumentType;
 use App\Livewire\Concerns\ManagesVehicle;
 use App\Models\Vehicle;
+use App\Support\ImageMetadata;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
@@ -47,7 +48,7 @@ class Documents extends Component
             'uploaded_by' => Auth::id(),
             'type' => $this->type,
             'name' => $this->name,
-            'path' => $this->file->store("vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
+            'path' => ImageMetadata::storeClean($this->file, "vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
             'mime' => $this->file->getMimeType(),
             'size' => $this->file->getSize(),
             'expires_on' => $this->expires_on ?: null,

@@ -39,6 +39,25 @@ trait PicksShop
         return $this->shopId ? Shop::directory()->find($this->shopId) : null;
     }
 
+    /**
+     * If an address belongs to a listed shop, select that shop instead of exposing its email.
+     * Returns the email that may be shown in the form ('' when it was a listed shop).
+     */
+    protected function adoptKnownShop(?string $email): string
+    {
+        if (blank($email)) {
+            return '';
+        }
+
+        if ($shop = Shop::directory()->where('email', strtolower(trim($email)))->first()) {
+            $this->shopId = $shop->getKey();
+
+            return '';
+        }
+
+        return $email;
+    }
+
     public function pickShop(int $id): void
     {
         $shop = Shop::directory()->findOrFail($id);

@@ -40,3 +40,13 @@ if (! function_exists('clean_amount')) {
         return str_replace([',', '$', ' '], '', (string) $amount);
     }
 }
+
+if (! function_exists('md')) {
+    /**
+     * Escape user-provided text before it goes into a Markdown email, so it can't add links, images or HTML.
+     */
+    function md(?string $text): string
+    {
+        return preg_replace('/([\\\\`*_{}\[\]()#+\-.!|<>~])/', '\\\\$1', (string) $text);
+    }
+}

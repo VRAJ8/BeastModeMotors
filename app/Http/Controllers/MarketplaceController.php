@@ -21,7 +21,9 @@ class MarketplaceController extends Controller
     public function show(Request $request, Listing $listing, PassportScore $scorer, OdometerAnalyzer $odometer, ListingPublisher $publisher): View
     {
         $user = $request->user();
-        $isSeller = $user?->getKey() === $listing->seller_id;
+        // "Seller" only while they still own the car: after a sale the listing must not become a window
+        // into the new owner's passport.
+        $isSeller = $user !== null && $user->getKey() === $listing->seller_id && $listing->vehicle->user_id === $listing->seller_id;
 
         abort_unless($listing->isPublic() || $isSeller || $user?->is_admin, 404);
 

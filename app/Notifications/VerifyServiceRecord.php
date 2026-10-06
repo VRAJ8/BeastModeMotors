@@ -32,9 +32,9 @@ class VerifyServiceRecord extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject("Can you confirm work on a {$vehicle->title()}?")
-            ->greeting("Hello {$this->verification->shop_name},")
-            ->line("{$this->verification->requester?->name} has logged work your shop did on their {$vehicle->title()} and asked you to confirm it.")
-            ->line("**{$record->title}** · ".$record->performed_on->format('M j, Y').' · '.number_format($record->mileage).' miles'.($record->cost_cents ? ' · '.money($record->cost_cents) : ''))
+            ->greeting('Hello '.md($this->verification->shop_name).',')
+            ->line(md($this->verification->requester?->name).' has logged work your shop did on their '.md($vehicle->title()).' and asked you to confirm it.')
+            ->line('**'.md($record->title).'** · '.$record->performed_on->format('M j, Y').' · '.number_format($record->mileage).' miles'.($record->cost_cents ? ' · '.money($record->cost_cents) : ''))
             ->action('Review the record', $this->verification->signedUrl())
             ->line('It takes one click to confirm, or you can tell us if something doesn\'t match your records. No account is needed.')
             ->line('Confirmed records help your customer sell their car for a fair price — and show buyers your shop looks after cars properly.')

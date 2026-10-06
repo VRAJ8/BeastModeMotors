@@ -7,7 +7,6 @@ use App\Models\Vehicle;
 use App\Services\OdometerAnalyzer;
 use App\Services\PassportScore;
 use App\Support\Qr;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 /**
@@ -86,16 +85,27 @@ class VehicleController extends Controller
     /**
      * A printable "For sale" sign for the car window, with a QR code to the live passport.
      */
-    public function windowSign(Vehicle $vehicle, PassportScore $scorer): View|RedirectResponse
+    public function windowSign(Vehicle $vehicle, PassportScore $scorer): View
     {
         $listing = $vehicle->openListing;
-        $link = $listing?->shareLink?->isActive() ? $listing->shareLink : $vehicle->shareLinks->first(fn ($l) => $l->isActive());
 
-        if (! $link) {
-            return to_route('vehicles.share', $vehicle)->with('toast', 'Create a share link first — the sign’s QR code points to it.');
-        }
-
-        $target = $listing?->isPublic() ? route('listings.show', $listing) : $link->url();
+        // A sign in a window is public: point it at the listing, or at a dedicated link with safe defaults —
+        // never at whatever private link (with costs or the full VIN) the owner made last.
+        $target = $listing?->isPublic()
+            ? route('listings.show', $listing)
+            : $vehicle->shareLinks()
+                ->where('label', 'Window sign')
+                ->where('created_by', $vehicle->user_id)
+                ->whereNull('revoked_at')
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->firstOr(fn () => $vehicle->shareLinks()->create([
+                    'created_by' => $vehicle->user_id,
+                    'label' => 'Window sign',
+                    'show_costs' => false,
+                    'show_full_vin' => false,
+                    'show_documents' => true,
+                ]))
+                ->url();
 
         return view('vehicles.window-sign', [
             'vehicle' => $vehicle,

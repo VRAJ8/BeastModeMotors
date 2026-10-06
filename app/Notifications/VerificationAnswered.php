@@ -44,8 +44,8 @@ class VerificationAnswered extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject($this->headline())
-            ->line($this->headline().'.')
-            ->when($this->verification->response_note, fn (MailMessage $mail) => $mail->line('Their note: “'.$this->verification->response_note.'”'))
+            ->line(md($this->headline()).'.')
+            ->when($this->verification->response_note, fn (MailMessage $mail) => $mail->line('Their note: “'.md($this->verification->response_note).'”'))
             ->line($this->confirmed()
                 ? 'The record now carries a Shop Verified stamp on your passport.'
                 : 'The record is marked as disputed. Check the details and correct or remove it.')

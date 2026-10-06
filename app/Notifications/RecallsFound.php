@@ -36,10 +36,10 @@ class RecallsFound extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)->subject($this->headline())->line($this->headline().':');
+        $mail = (new MailMessage)->subject($this->headline())->line(md($this->headline()).':');
 
         foreach ($this->recalls as $recall) {
-            $mail->line("• **{$recall->component}** (NHTSA {$recall->campaign_number})");
+            $mail->line('• **'.md($recall->component).'** (NHTSA '.md($recall->campaign_number).')');
         }
 
         return $mail

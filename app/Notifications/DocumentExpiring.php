@@ -33,7 +33,7 @@ class DocumentExpiring extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject($this->headline())
-            ->line($this->headline().' (“'.$this->document->name.'”).')
+            ->line(md($this->headline()).' (“'.md($this->document->name).'”).')
             ->line('Renew it and upload the new copy so everything stays in one place.')
             ->action('View documents', route('vehicles.documents', $this->document->vehicle_id));
     }

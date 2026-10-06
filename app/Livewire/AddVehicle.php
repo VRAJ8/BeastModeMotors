@@ -11,15 +11,18 @@ use App\Services\VehicleLookup;
 use App\Services\VinDecoder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class AddVehicle extends Component
 {
+    #[Locked]
     public int $step = 1;
 
     public string $vin = '';
 
     /** @var array<string, mixed>|null */
+    #[Locked]
     public ?array $lookup = null;
 
     public ?int $year = null;
@@ -108,6 +111,21 @@ class AddVehicle extends Component
     public function save(Garage $garage, RecallSync $recalls)
     {
         $this->purchase_price = clean_amount($this->purchase_price);
+        // The VIN field is client-editable after decoding: never trust it at save time.
+        if ($this->lookup === null || VinDecoder::normalize($this->vin) !== $this->lookup['vin']) {
+            $this->step = 1;
+            $this->addError('vin', 'The VIN changed — decode it again.');
+
+            return null;
+        }
+
+        if (Vehicle::where('vin', $this->lookup['vin'])->exists()) {
+            $this->step = 1;
+            $this->addError('vin', 'This car already has a passport.');
+
+            return null;
+        }
+
         $this->validate($this->detailRules());
         $this->validate([
             'acquired_via' => ['required', Rule::enum(AcquiredVia::class)->except([AcquiredVia::Platform])],
@@ -121,7 +139,7 @@ class AddVehicle extends Component
         ]);
 
         $vehicle = $garage->register(Auth::user(), [
-            'vin' => $this->vin,
+            'vin' => $this->lookup['vin'],
             'year' => $this->year,
             'make' => trim($this->make),
             'model' => trim($this->model),

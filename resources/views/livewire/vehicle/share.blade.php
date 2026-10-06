@@ -92,7 +92,7 @@
                 </div>
                 <fieldset class="space-y-3">
                     <legend class="label">They can see</legend>
-                    <label class="flex gap-3 text-sm"><input type="checkbox" wire:model="show_documents" class="checkbox mt-0.5"> <span>Receipts attached to records<span class="block text-xs text-muted">Title, registration and insurance are never shared.</span></span></label>
+                    <label class="flex gap-3 text-sm"><input type="checkbox" wire:model="show_documents" class="checkbox mt-0.5"> <span>Receipts attached to records<span class="block text-xs text-muted">Shown exactly as uploaded, including any prices on them. Title, registration and insurance are never shared.</span></span></label>
                     <label class="flex gap-3 text-sm"><input type="checkbox" wire:model="show_full_vin" class="checkbox mt-0.5"> <span>Full VIN<span class="block text-xs text-muted">Buyers need it to run their own checks.</span></span></label>
                     <label class="flex gap-3 text-sm"><input type="checkbox" wire:model="show_costs" class="checkbox mt-0.5"> <span>What each service cost</span></label>
                 </fieldset>

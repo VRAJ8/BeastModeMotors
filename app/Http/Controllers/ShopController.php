@@ -15,8 +15,8 @@ class ShopController extends Controller
 {
     public function index(Request $request): View
     {
-        $search = trim((string) $request->query('q'));
-        $state = (string) $request->query('state');
+        $search = is_string($request->query('q')) ? trim($request->query('q')) : '';
+        $state = is_string($request->query('state')) ? $request->query('state') : '';
 
         $shops = Shop::directory()
             ->withCount(['verifications as confirmed_count' => fn ($q) => $q->where('status', VerificationStatus::Confirmed)])

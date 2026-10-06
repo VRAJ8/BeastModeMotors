@@ -7,6 +7,7 @@ use App\Livewire\Concerns\ManagesVehicle;
 use App\Models\Listing;
 use App\Models\Vehicle;
 use App\Services\ListingPublisher;
+use App\Support\ImageMetadata;
 use App\Support\UsStates;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -59,7 +60,7 @@ class Sell extends Component
 
         foreach ($this->photos as $photo) {
             $this->vehicle->photos()->create([
-                'path' => $photo->store("vehicles/{$this->vehicle->getKey()}/photos", config('passport.disks.photos')),
+                'path' => ImageMetadata::storeClean($photo, "vehicles/{$this->vehicle->getKey()}/photos", config('passport.disks.photos')),
                 'position' => ++$position,
             ]);
         }

@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Behind a load balancer (Render, Railway, Fly…) so URLs are generated with https.
         $middleware->trustProxies(at: '*');
+
+        // ...but only answer to our own host, so a forged Host header can't poison links in emails.
+        $middleware->trustHosts();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

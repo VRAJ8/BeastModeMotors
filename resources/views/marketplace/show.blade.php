@@ -15,7 +15,7 @@
             'mileageFromOdometer' => ['@type' => 'QuantitativeValue', 'value' => $listing->mileage, 'unitCode' => 'SMI'],
             'image' => $photos->map->url()->values(), 'description' => str($listing->description)->limit(300)->toString(),
             'offers' => ['@type' => 'Offer', 'price' => $listing->price_cents / 100, 'priceCurrency' => 'USD', 'availability' => 'https://schema.org/InStock'],
-        ], JSON_UNESCAPED_SLASHES) !!}</script>
+        ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
     </x-slot:head>
 
     <div class="container-x py-6">

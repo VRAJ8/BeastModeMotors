@@ -111,7 +111,8 @@ class DealFlow
 
             $role = $deal->roleOf($author);
             $verb = $previous && $previous->user_id !== $author->getKey() ? 'countered with' : 'offered';
-            $this->system($deal, ucfirst($role)." {$verb} ".money($amountCents).($note ? " — “{$note}”" : '').'.');
+            $this->system($deal, ucfirst($role)." {$verb} ".money($amountCents).'.');
+            $this->quote($deal, $author, $note);
 
             $deal->counterparty($author)->notify(new DealUpdate(
                 $deal,
@@ -193,7 +194,8 @@ class DealFlow
                 $deal->listing->update(['status' => ListingStatus::Active]);
             }
 
-            $this->system($deal, ucfirst($deal->roleOf($user)).' cancelled the deal'.($reason ? ": “{$reason}”" : '.'));
+            $this->system($deal, ucfirst($deal->roleOf($user)).' cancelled the deal.');
+            $this->quote($deal, $user, $reason);
         });
 
         $deal->counterparty($user)->notify(new DealUpdate($deal, "{$user->publicName()} cancelled the deal for the {$deal->vehicle->title()}", $reason, tone: 'danger'));
@@ -259,6 +261,20 @@ class DealFlow
         $deal->counterparty($user)->notify(new DealUpdate($deal, "{$user->publicName()} confirmed the handover", 'Confirm on your side to complete the sale and transfer the passport.'));
 
         return false;
+    }
+
+    /**
+     * Free text attached to an action (offer note, cancel reason) is posted as the user's own message,
+     * so it is scanned and attributed like any other message.
+     */
+    private function quote(Deal $deal, User $author, ?string $text): void
+    {
+        if (blank($text)) {
+            return;
+        }
+
+        $flags = $this->shield->scan($text);
+        $deal->messages()->create(['user_id' => $author->getKey(), 'body' => trim($text), 'risk_flags' => $flags ?: null]);
     }
 
     public function system(Deal $deal, string $body): DealMessage

@@ -36,11 +36,11 @@ class MaintenanceDue extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)->subject($this->headline())->line($this->headline().':');
+        $mail = (new MailMessage)->subject($this->headline())->line(md($this->headline()).':');
 
         foreach ($this->reminders as $reminder) {
             $state = $reminder->status($this->vehicle->current_mileage) === Reminder::OVERDUE ? 'overdue' : 'due soon';
-            $mail->line("• **{$reminder->task}** — {$state} ({$reminder->dueLabel($this->vehicle->current_mileage)})");
+            $mail->line('• **'.md($reminder->task)."** — {$state} (".md($reminder->dueLabel($this->vehicle->current_mileage)).')');
         }
 
         return $mail
