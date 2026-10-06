@@ -5,6 +5,7 @@ use App\Models\User;
 use Livewire\Livewire;
 
 it('grants and revokes staff access from the admin panel', function () {
+    config(['passport.demo' => false]);
     $admin = User::factory()->admin()->create();
     $member = User::factory()->create();
 
