@@ -17,6 +17,17 @@
                    class="input vin py-3 text-lg uppercase" placeholder="e.g. 1HGCM82633A004352">
             @error('vin') <p class="error">{{ $message }}</p> @enderror
 
+            @if ($reviewRequested)
+                <div class="mt-4 rounded-xl bg-verified-soft p-4 text-sm text-verified">
+                    <strong>Review requested.</strong> Our team will email you at {{ auth()->user()->email }} and ask for your title or registration. Nothing changes on the other passport until then.
+                </div>
+            @elseif ($contested)
+                <div class="mt-4 rounded-xl border border-line bg-paper p-4 text-sm text-ink-soft">
+                    <p><strong class="text-ink">Is this your car, and you didn't buy it from that owner?</strong> Anyone can type a VIN, so if someone registered your car by mistake (or on purpose), we'll check the paperwork and move the passport to you.</p>
+                    <button type="button" wire:click="requestReview" class="btn-secondary btn-sm mt-3">It's my car — request a review</button>
+                </div>
+            @endif
+
             <div class="mt-6 flex items-center justify-between gap-4">
                 <p class="flex items-center gap-1.5 text-xs text-muted"><x-heroicon-m-lock-closed class="size-3.5" /> Decoded with NHTSA open data. Your VIN is never shown publicly unless you share it.</p>
                 <button class="btn-primary" wire:loading.attr="disabled">

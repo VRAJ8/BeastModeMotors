@@ -21,7 +21,10 @@ class CostReport
     {
         $vehicle = $ownership->vehicle;
         $expenses = Expense::where('ownership_id', $ownership->getKey())->get();
-        $records = ServiceRecord::where('ownership_id', $ownership->getKey())->get(['performed_on', 'cost_cents']);
+        // Older invoices the owner backfilled are the car's history, not what it has cost them.
+        $records = ServiceRecord::where('ownership_id', $ownership->getKey())
+            ->whereDate('performed_on', '>=', $ownership->started_on)
+            ->get(['performed_on', 'cost_cents']);
 
         $maintenance = (int) $records->sum('cost_cents');
         $byCategory = collect(['maintenance' => $maintenance])
@@ -59,7 +62,8 @@ class CostReport
     }
 
     /**
-     * Full-tank method: distance since the previous fill divided by the volume of this fill.
+     * Full-tank method: distance between the first and last fills with an odometer reading, divided by
+     * everything put in after the first — including fills logged without a reading, which still burned fuel.
      *
      * @param  Collection<int, Expense>  $expenses
      * @return array{value: float, unit: string, fills: int}|null
@@ -68,19 +72,22 @@ class CostReport
     {
         foreach ([[ExpenseCategory::Fuel, 'mpg'], [ExpenseCategory::Charging, 'mi/kWh']] as [$category, $unit]) {
             $fills = $expenses
-                ->filter(fn (Expense $e) => $e->category === $category && $e->odometer && $e->volume > 0)
-                ->sortBy('odometer')
+                ->filter(fn (Expense $e) => $e->category === $category && $e->volume > 0)
+                ->sort(fn (Expense $a, Expense $b) => [$a->spent_on, $a->odometer ?? PHP_INT_MAX, $a->id] <=> [$b->spent_on, $b->odometer ?? PHP_INT_MAX, $b->id])
                 ->values();
 
-            if ($fills->count() < 2) {
+            $first = $fills->search(fn (Expense $e) => $e->odometer !== null);
+            $last = $fills->reverse()->search(fn (Expense $e) => $e->odometer !== null);
+
+            if ($first === false || $last === false || $last <= $first) {
                 continue;
             }
 
-            $distance = $fills->last()->odometer - $fills->first()->odometer;
-            $volume = $fills->slice(1)->sum('volume');
+            $distance = $fills[$last]->odometer - $fills[$first]->odometer;
+            $volume = $fills->slice($first + 1, $last - $first)->sum('volume');
 
             if ($distance > 0 && $volume > 0) {
-                return ['value' => round($distance / $volume, 1), 'unit' => $unit, 'fills' => $fills->count()];
+                return ['value' => round($distance / $volume, 1), 'unit' => $unit, 'fills' => $last - $first + 1];
             }
         }
 

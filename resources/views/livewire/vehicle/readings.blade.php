@@ -13,4 +13,13 @@
     <button class="btn-primary">Update</button>
     @error('reading') <p class="error w-full">{{ $message }}</p> @enderror
     @error('recorded_on') <p class="error w-full">{{ $message }}</p> @enderror
+    @if ($entries->isNotEmpty())
+        <p class="w-full text-xs text-muted">
+            Your entries:
+            @foreach ($entries as $entry)
+                <span class="num">{{ miles($entry->reading) }}</span> on {{ $entry->recorded_on->format('M j, Y') }}
+                <button type="button" wire:click="remove({{ $entry->id }})" wire:confirm="Remove this reading?" class="font-semibold underline hover:text-danger">Remove</button>@if (! $loop->last) · @endif
+            @endforeach
+        </p>
+    @endif
 </form>

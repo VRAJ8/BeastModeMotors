@@ -6,6 +6,7 @@ use App\Enums\OdometerSource;
 use App\Enums\ProviderType;
 use App\Enums\ServiceCategory;
 use App\Enums\VerificationStatus;
+use App\Services\MaintenancePlanner;
 use Database\Factories\ServiceRecordFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -158,6 +159,14 @@ class ServiceRecord extends Model
         return $ownershipId !== null && $this->ownership_id === $ownershipId;
     }
 
+    /**
+     * Once a shop has confirmed or disputed a record, its answer is part of the car's history for good.
+     */
+    public function isPermanent(): bool
+    {
+        return $this->verified_at !== null || $this->disputed_at !== null;
+    }
+
     public function canRequestVerification(): bool
     {
         return $this->provider_type !== ProviderType::Diy
@@ -180,8 +189,11 @@ class ServiceRecord extends Model
             $record->vehicle->refreshMileage();
         });
 
-        // Receipts go with the record (before the foreign key unlinks them).
-        static::deleting(fn (ServiceRecord $record) => $record->documents()->get()->each->delete());
+        // Receipts go with the record (before the foreign key unlinks them), and maintenance it completed rolls back.
+        static::deleting(function (ServiceRecord $record) {
+            $record->documents()->get()->each->delete();
+            app(MaintenancePlanner::class)->forget($record);
+        });
 
         static::deleted(function (ServiceRecord $record) {
             $record->reading()->delete();

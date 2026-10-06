@@ -71,8 +71,9 @@
                         </div>
                     </div>
                     @error('interval_miles') <p class="error -mt-2">{{ $message }}</p> @enderror
+                    @error('interval_months') <p class="error -mt-2">{{ $message }}</p> @enderror
                     <div class="divider"></div>
-                    <p class="text-xs text-muted">Last done — fill in if you know it but don't have a record yet.</p>
+                    <p class="text-xs text-muted">Last done — fill in if you know it but don't have a record yet. A newer service record that covers this task takes precedence.</p>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="label" for="last_done_on">Date</label>

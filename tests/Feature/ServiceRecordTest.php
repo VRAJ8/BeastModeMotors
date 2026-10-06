@@ -72,8 +72,8 @@ it('emails the shop a verification request when asked', function () {
     expect(ServiceRecord::first()->pendingVerification)->not->toBeNull();
 });
 
-it('locks the facts of a shop-verified record', function () {
-    $record = ServiceRecord::factory()->verified()->create(['vehicle_id' => $this->vehicle->id, 'mileage' => 29000, 'title' => 'Timing belt']);
+it('locks a shop-verified record exactly as the shop confirmed it', function () {
+    $record = ServiceRecord::factory()->verified()->create(['vehicle_id' => $this->vehicle->id, 'mileage' => 29000, 'title' => 'Timing belt', 'description' => 'As confirmed']);
 
     Livewire::actingAs($this->owner)->test(RecordForm::class, ['vehicle' => $this->vehicle, 'record' => $record])
         ->set('title', 'Something else')
@@ -82,7 +82,7 @@ it('locks the facts of a shop-verified record', function () {
         ->call('save');
 
     $record->refresh();
-    expect($record->title)->toBe('Timing belt')->and($record->mileage)->toBe(29000)->and($record->description)->toBe('Added a note');
+    expect($record->title)->toBe('Timing belt')->and($record->mileage)->toBe(29000)->and($record->description)->toBe('As confirmed');
 });
 
 it('deletes a record together with its reading and receipts', function () {

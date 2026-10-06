@@ -114,6 +114,11 @@ class RecordForm extends Component
         $this->provider_email = '';
     }
 
+    private function frozen(): bool
+    {
+        return $this->record !== null && ($this->record->isLocked() || $this->record->pendingVerification()->exists());
+    }
+
     public function addItem(): void
     {
         $this->items[] = ['description' => '', 'kind' => 'part', 'amount' => ''];
@@ -176,7 +181,9 @@ class RecordForm extends Component
 
     public function save(MaintenancePlanner $planner, ShopVerifier $verifier)
     {
-        $locked = $this->record?->isLocked() ?? false;
+        // Verified records are locked; while a shop is reviewing one, its facts are frozen too,
+        // so the shop confirms exactly what it was shown.
+        $locked = $this->frozen();
         $this->cost = clean_amount($this->cost);
         $this->items = array_map(fn ($i) => ['amount' => clean_amount($i['amount'] ?? '')] + $i, $this->items);
 
@@ -229,7 +236,9 @@ class RecordForm extends Component
 
         if ($this->record) {
             // A shop-verified record keeps its facts; only the notes and attachments can change.
-            $this->record->update($locked ? ['description' => $this->description ?: null] : $facts + ['description' => $this->description ?: null]);
+            if (! $locked) {
+                $this->record->update($facts + ['description' => $this->description ?: null]);
+            }
             $record = $this->record;
         } else {
             $record = $this->vehicle->records()->create($facts + [
@@ -280,7 +289,8 @@ class RecordForm extends Component
             'categories' => ServiceCategory::options(),
             'providers' => ProviderType::options(),
             'reminders' => $this->vehicle->reminders,
-            'locked' => $this->record?->isLocked() ?? false,
+            'locked' => $this->frozen(),
+            'pending' => $this->record?->pendingVerification,
         ]);
     }
 }

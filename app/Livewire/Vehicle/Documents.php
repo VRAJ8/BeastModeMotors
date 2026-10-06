@@ -60,7 +60,8 @@ class Documents extends Component
 
     public function delete(int $id): void
     {
-        $this->vehicle->documents()->whereKey($id)->firstOrFail()->delete();
+        // Receipts and reports from earlier owners are part of the car's history: read-only.
+        $this->vehicle->documents()->where('ownership_id', $this->vehicle->currentOwnership?->getKey())->whereKey($id)->firstOrFail()->delete();
         $this->dispatch('toast', message: 'Document deleted.');
     }
 
@@ -69,6 +70,7 @@ class Documents extends Component
         $documents = $this->vehicle->documents()->with('record')->get();
 
         return view('livewire.vehicle.documents', [
+            'currentOwnershipId' => $this->vehicle->currentOwnership?->getKey(),
             'groups' => $documents->groupBy(fn ($d) => $d->type->transfersWithCar() ? 'car' : 'personal'),
             'types' => DocumentType::options(),
             'expiring' => DocumentType::tryFrom($this->type)?->expires() ?? false,

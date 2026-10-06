@@ -1,9 +1,14 @@
 <form wire:submit="save" class="grid gap-6 lg:grid-cols-[1fr_320px]">
     <div class="space-y-6">
-        @if ($locked)
+        @if ($pending)
+            <div class="flex gap-3 rounded-2xl border border-warn/30 bg-warn-soft p-4 text-sm text-warn">
+                <x-heroicon-m-clock class="size-5 shrink-0" />
+                <p><strong>Waiting for {{ $pending->shop_name }} to confirm.</strong> The record is frozen so they confirm exactly what they were shown. Cancel the request from the history page if you need to change it. You can still attach receipts.</p>
+            </div>
+        @elseif ($locked)
             <div class="flex gap-3 rounded-2xl border border-verified/30 bg-verified-soft p-4 text-sm text-verified">
                 <x-heroicon-s-check-badge class="size-5 shrink-0" />
-                <p><strong>Confirmed by {{ $record->provider_name }}.</strong> The date, mileage, cost and work are locked so the confirmation stays meaningful. You can still add notes and attachments.</p>
+                <p><strong>Confirmed by {{ $record->shop?->name ?? $record->provider_name }}.</strong> The record is locked exactly as the shop confirmed it. You can still attach receipts.</p>
             </div>
         @endif
 
@@ -44,7 +49,7 @@
                 @endif
                 <div class="sm:col-span-6">
                     <label class="label" for="description">Notes <span class="font-normal text-muted">(optional)</span></label>
-                    <textarea id="description" wire:model="description" rows="3" class="input" placeholder="Parts used, anything the shop flagged for next time…"></textarea>
+                    <textarea id="description" wire:model="description" rows="3" class="input" placeholder="Parts used, anything the shop flagged for next time…" @disabled($locked)></textarea>
                 </div>
             </div>
         </section>

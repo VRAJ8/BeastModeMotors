@@ -79,7 +79,15 @@ class History extends Component
 
     public function delete(int $recordId): void
     {
-        $this->findRecord($recordId)->delete();
+        $record = $this->findRecord($recordId);
+
+        if ($record->isPermanent()) {
+            $this->dispatch('toast', message: 'The shop has answered for this record, so it stays in the car\'s history.');
+
+            return;
+        }
+
+        $record->delete();
         $this->dispatch('toast', message: 'Record deleted.');
     }
 
@@ -98,7 +106,7 @@ class History extends Component
     {
         $records = $this->vehicle->records()
             ->withCount('documents')
-            ->with(['documents', 'pendingVerification', 'ownership', 'verifications' => fn ($q) => $q->latest()->limit(1)])
+            ->with(['documents', 'pendingVerification', 'ownership', 'verifications' => fn ($q) => $q->with('shop')->latest()->limit(1)])
             ->when($this->category, fn ($q) => $q->where('category', $this->category))
             ->get()
             ->when($this->evidence, fn ($records) => $records->filter(fn (ServiceRecord $r) => $r->evidence() === $this->evidence));

@@ -5,11 +5,14 @@ namespace App\Livewire;
 use App\Enums\AcquiredVia;
 use App\Enums\FuelType;
 use App\Models\Vehicle;
+use App\Notifications\OwnershipReviewRequested;
 use App\Services\Garage;
 use App\Services\RecallSync;
 use App\Services\VehicleLookup;
 use App\Services\VinDecoder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -57,6 +60,13 @@ class AddVehicle extends Component
 
     public string $purchase_price = '';
 
+    /** The VIN another account already holds a passport for, which this user can ask staff to review. */
+    #[Locked]
+    public ?string $contested = null;
+
+    #[Locked]
+    public bool $reviewRequested = false;
+
     public function mount(): void
     {
         $this->started_on = now()->toDateString();
@@ -73,8 +83,13 @@ class AddVehicle extends Component
             'vin.regex' => 'VINs never contain the letters I, O or Q (they look like 1 and 0).',
         ]);
 
+        $this->contested = null;
+        $this->reviewRequested = false;
+
         if ($existing = Vehicle::where('vin', $this->vin)->first()) {
-            $this->addError('vin', $existing->user_id === Auth::id()
+            $mine = $existing->user_id === Auth::id();
+            $this->contested = $mine ? null : $this->vin;
+            $this->addError('vin', $mine
                 ? 'This car is already in your garage.'
                 : 'This car already has a passport with another owner. If you bought it privately, ask the seller to transfer it to you through a deal so its history comes with it.');
 
@@ -95,6 +110,30 @@ class AddVehicle extends Component
         $this->fuel_type = $details['fuel_type'] ?? 'gasoline';
 
         $this->step = 2;
+    }
+
+    /**
+     * Someone else registered this VIN. Anyone can type a VIN, so let the real owner ask a person to look.
+     */
+    public function requestReview(): void
+    {
+        $vehicle = $this->contested ? Vehicle::where('vin', $this->contested)->first() : null;
+
+        if (! $vehicle || $vehicle->user_id === Auth::id() || $this->reviewRequested) {
+            return;
+        }
+
+        if (RateLimiter::tooManyAttempts('ownership-review:'.Auth::id(), 3)) {
+            $this->addError('vin', 'You\'ve sent several review requests today. Our team will reply to those first.');
+
+            return;
+        }
+
+        RateLimiter::hit('ownership-review:'.Auth::id(), 86400);
+
+        Notification::route('mail', config('passport.support_email'))->notify(new OwnershipReviewRequested($vehicle, Auth::user()));
+
+        $this->reviewRequested = true;
     }
 
     public function confirmDetails(): void

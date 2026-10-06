@@ -73,9 +73,9 @@
                                     <button wire:click="cancelVerification({{ $record->id }})" class="font-semibold underline">Cancel request</button>
                                 </p>
                             @elseif ($record->evidence() === 'disputed' && $latest?->response_note)
-                                <p class="mt-3 rounded-xl bg-danger-soft p-3 text-xs text-danger"><strong>{{ $latest->shop_name }}:</strong> “{{ $latest->response_note }}”</p>
+                                <p class="mt-3 rounded-xl bg-danger-soft p-3 text-xs text-danger"><strong>{{ $latest->shop?->name ?? $latest->shop_name }}:</strong> “{{ $latest->response_note }}”</p>
                             @elseif ($record->evidence() === 'verified' && $latest?->responder_name)
-                                <p class="mt-3 text-xs text-verified">Confirmed by {{ $latest->responder_name }} at {{ $latest->shop_name }} on {{ $latest->responded_at->format('M j, Y') }}</p>
+                                <p class="mt-3 text-xs text-verified">Confirmed by {{ $latest->responder_name }} at {{ $latest->shop?->name ?? $latest->shop_name }} on {{ $latest->responded_at->format('M j, Y') }}</p>
                             @endif
                         </div>
                         @if ($mine)
@@ -85,7 +85,11 @@
                             @endif
                             <div class="flex gap-1">
                                 <a href="{{ route('records.edit', [$vehicle, $record]) }}" class="btn-ghost btn-sm">Edit</a>
-                                <button wire:click="delete({{ $record->id }})" wire:confirm="Delete this record and its receipts? This can't be undone." class="btn-ghost btn-sm text-danger hover:bg-danger-soft hover:text-danger">Delete</button>
+                                @if ($record->isPermanent())
+                                    <span class="btn-ghost btn-sm cursor-help text-muted" title="The shop has answered for this record, so it stays in the car's history">Can't delete</span>
+                                @else
+                                    <button wire:click="delete({{ $record->id }})" wire:confirm="Delete this record and its receipts? This can't be undone." class="btn-ghost btn-sm text-danger hover:bg-danger-soft hover:text-danger">Delete</button>
+                                @endif
                             </div>
                         </div>
                         @else

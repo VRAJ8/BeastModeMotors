@@ -4,7 +4,9 @@ namespace App\Livewire\Vehicle;
 
 use App\Livewire\Concerns\ManagesVehicle;
 use App\Models\Reminder;
+use App\Models\ServiceRecord;
 use App\Models\Vehicle;
+use App\Services\MaintenancePlanner;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -46,7 +48,7 @@ class Maintenance extends Component
         $this->last_done_mileage = $reminder->last_done_mileage;
     }
 
-    public function save(): void
+    public function save(MaintenancePlanner $planner): void
     {
         $data = $this->validate([
             'task' => ['required', 'string', 'max:80'],
@@ -59,12 +61,27 @@ class Maintenance extends Component
             'last_done_mileage.max' => 'That\'s more than the car\'s current odometer.',
         ]);
 
-        $data['last_done_on'] = $data['last_done_on'] ?: null;
-        $data['notified_at'] = null;
+        $done = ['on' => $data['last_done_on'] ?: null, 'mileage' => $data['last_done_mileage']];
+        unset($data['last_done_on'], $data['last_done_mileage']);
 
-        $this->editingId
-            ? $this->find($this->editingId)->update($data)
-            : $this->vehicle->reminders()->create($data);
+        $reminder = $this->editingId ? $this->find($this->editingId) : $this->vehicle->reminders()->make();
+
+        // Records that ticked this task point at it by name, so a rename takes them along.
+        if ($reminder->exists && $reminder->task !== $data['task']) {
+            $this->vehicle->records()->whereNotNull('tasks')->get()
+                ->filter(fn (ServiceRecord $r) => in_array($reminder->task, $r->tasks, true))
+                ->each(fn (ServiceRecord $r) => $r->update(['tasks' => array_values(array_unique(array_map(fn ($t) => $t === $reminder->task ? $data['task'] : $t, $r->tasks)))]));
+        }
+
+        $reminder->fill($data);
+
+        // Only what the owner changed by hand becomes their own entry; dates that came from a record stay linked to it.
+        if (! $reminder->exists || $done['on'] !== $reminder->last_done_on?->toDateString() || $done['mileage'] !== $reminder->last_done_mileage) {
+            $reminder->fill(['baseline_done_on' => $done['on'], 'baseline_done_mileage' => $done['mileage']]);
+        }
+
+        $reminder->save();
+        $planner->refresh($reminder);
 
         $this->editingId = null;
         $this->dispatch('toast', message: 'Maintenance plan updated.');

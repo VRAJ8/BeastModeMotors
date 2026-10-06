@@ -22,13 +22,17 @@ class Shop extends Model
 
     public const FAST_MIN_ANSWERS = 3;
 
-    protected $fillable = ['name', 'slug', 'email', 'city', 'state', 'phone', 'website', 'about', 'specialties', 'is_listed', 'profile_completed_at'];
+    /** Distinct owners a shop must have confirmed work for before it is listed without staff vetting. */
+    public const MIN_CUSTOMERS = 2;
+
+    protected $fillable = ['name', 'slug', 'email', 'city', 'state', 'phone', 'website', 'about', 'specialties', 'is_listed', 'vetted_at', 'profile_completed_at'];
 
     protected function casts(): array
     {
         return [
             'specialties' => 'array',
             'is_listed' => 'boolean',
+            'vetted_at' => 'datetime',
             'profile_completed_at' => 'datetime',
         ];
     }
@@ -56,15 +60,27 @@ class Shop extends Model
         return $this->hasMany(ServiceRecord::class)->whereNotNull('verified_at');
     }
 
+    private ?bool $inDirectory = null;
+
+    public function isInDirectory(): bool
+    {
+        return $this->inDirectory ??= static::directory()->whereKey($this->getKey())->exists();
+    }
+
     /**
-     * Shops shown in the public directory: listed by staff and with at least one confirmation.
+     * Shops shown in the public directory: not hidden by staff, with confirmed work, and either vetted by
+     * staff or vouched for by several different owners — one person with two mailboxes can't list a shop.
      *
      * @param  Builder<Shop>  $query
      */
     public function scopeDirectory(Builder $query): void
     {
         $query->where('is_listed', true)
-            ->whereHas('verifications', fn (Builder $v) => $v->where('status', VerificationStatus::Confirmed));
+            ->whereHas('verifications', fn (Builder $v) => $v->where('status', VerificationStatus::Confirmed))
+            ->where(fn (Builder $q) => $q->whereNotNull('vetted_at')->orWhereRaw(
+                '(select count(distinct sv.requested_by) from shop_verifications sv where sv.shop_id = shops.id and sv.status = ?) >= ?',
+                [VerificationStatus::Confirmed->value, self::MIN_CUSTOMERS],
+            ));
     }
 
     public static function forEmail(string $email, string $name): self

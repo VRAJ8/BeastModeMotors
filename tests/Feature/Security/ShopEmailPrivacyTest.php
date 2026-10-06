@@ -16,7 +16,7 @@ beforeEach(function () {
     $other = ServiceRecord::factory()->create(['vehicle_id' => car()->id]);
     $v = app(ShopVerifier::class)->request($other, $other->vehicle->owner, 'Eastside', 'desk@eastside.test');
     app(ShopVerifier::class)->answer($v, true, 'Dee', null, '127.0.0.1');
-    $this->shop = Shop::firstWhere('email', 'desk@eastside.test');
+    $this->shop = tap(Shop::firstWhere('email', 'desk@eastside.test'))->update(['vetted_at' => now()]);
 
     $this->vehicle = car(['current_mileage' => 30000]);
     $this->record = ServiceRecord::factory()->create(['vehicle_id' => $this->vehicle->id, 'provider_name' => 'Eastside', 'provider_email' => 'desk@eastside.test']);

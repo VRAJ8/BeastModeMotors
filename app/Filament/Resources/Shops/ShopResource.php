@@ -21,6 +21,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class ShopResource extends Resource
 {
@@ -47,6 +48,10 @@ class ShopResource extends Resource
                 TextInput::make('website')->url()->maxLength(255),
                 Textarea::make('about')->columnSpanFull()->maxLength(1000),
                 Toggle::make('is_listed')->label('Shown in the public directory'),
+                Toggle::make('vetted_at')->label('Vetted by staff')
+                    ->helperText('Unvetted shops are listed once owners of '.Shop::MIN_CUSTOMERS.' different accounts have had work confirmed.')
+                    ->formatStateUsing(fn ($state) => $state !== null)
+                    ->dehydrateStateUsing(fn (bool $state, ?Shop $record) => $state ? ($record?->vetted_at ?? now()) : null),
             ]);
     }
 
@@ -57,7 +62,7 @@ class ShopResource extends Resource
                 'verifications as confirmed_count' => fn ($v) => $v->where('status', VerificationStatus::Confirmed),
                 'verifications as disputed_count' => fn ($v) => $v->where('status', VerificationStatus::Disputed),
                 'verifications as requests_count',
-            ]))
+            ])->withCount(['verifications as customers_count' => fn ($v) => $v->where('status', VerificationStatus::Confirmed)->select(DB::raw('count(distinct requested_by)'))]))
             ->defaultSort('confirmed_count', 'desc')
             ->columns([
                 TextColumn::make('name')->description(fn (Shop $record) => $record->email)->searchable(['name', 'email']),
@@ -65,6 +70,8 @@ class ShopResource extends Resource
                 TextColumn::make('confirmed_count')->label('Confirmed')->sortable(),
                 TextColumn::make('disputed_count')->label('Disputed')->sortable(),
                 TextColumn::make('requests_count')->label('Requests')->sortable(),
+                TextColumn::make('customers_count')->label('Owners')->tooltip('Different accounts with confirmed work')->sortable(),
+                TextColumn::make('vetted_at')->label('Vetted')->since()->placeholder('—'),
                 TextColumn::make('profile_completed_at')->label('Profile')->since()->placeholder('Not completed'),
                 ToggleColumn::make('is_listed')->label('Listed'),
             ])

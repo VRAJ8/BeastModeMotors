@@ -76,17 +76,19 @@ class PassportScore
 
     /**
      * Share of the car's documented life (in 12-month windows, up to 10) with at least one record.
+     * A record the shop disputed proves nothing, so it fills no gap.
      */
     private function coverage(Vehicle $vehicle): array
     {
-        $records = $vehicle->records;
+        $records = $vehicle->records->reject(fn (ServiceRecord $r) => $r->evidence() === ServiceRecord::EVIDENCE_DISPUTED);
 
         if ($records->isEmpty()) {
-            return $this->component('coverage', 'History coverage', 0, 25, 'No records yet', 'Log the most recent service you can find a receipt for.');
+            return $this->component('coverage', 'History coverage', 0, 25, $vehicle->records->isEmpty() ? 'No records yet' : 'Only disputed records', 'Log the most recent service you can find a receipt for.');
         }
 
         $start = collect([$records->min('performed_on'), $vehicle->ownerships->min('started_on')])->filter()->min();
-        $windows = (int) min(10, max(1, ceil(floor($start->diffInMonths(now())) / 12)));
+        // Round, so a car with 13 months of history isn't judged on a second year it barely lived.
+        $windows = (int) min(10, max(1, round(floor($start->diffInMonths(now())) / 12)));
 
         $covered = collect(range(0, $windows - 1))->filter(function (int $i) use ($records) {
             $to = now()->subYears($i);

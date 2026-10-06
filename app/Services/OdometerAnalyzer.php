@@ -59,6 +59,7 @@ class OdometerAnalyzer
      */
     private function sorted(Collection $readings): Collection
     {
-        return $readings->sortBy([['recorded_on', 'asc'], ['id', 'asc']])->values();
+        // Within a day the order readings were typed in says nothing, so a same-day difference isn't a rollback.
+        return $readings->sortBy([['recorded_on', 'asc'], ['reading', 'asc'], ['id', 'asc']])->values();
     }
 }

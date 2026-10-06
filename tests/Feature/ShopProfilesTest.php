@@ -17,7 +17,7 @@ beforeEach(fn () => Notification::fake());
 /**
  * A shop that has confirmed one record, answering after the given number of hours.
  */
-function confirmedShop(string $email = 'desk@eastside.test', string $name = 'Eastside Euro', float $hours = 3): Shop
+function confirmedShop(string $email = 'desk@eastside.test', string $name = 'Eastside Euro', float $hours = 3, bool $vetted = true): Shop
 {
     $record = ServiceRecord::factory()->create(['vehicle_id' => car()->id, 'title' => 'Brake fluid flush']);
     $verification = app(ShopVerifier::class)->request($record, $record->vehicle->owner, $name, $email);
@@ -25,7 +25,9 @@ function confirmedShop(string $email = 'desk@eastside.test', string $name = 'Eas
     app(ShopVerifier::class)->answer($verification, true, 'Dee', null, '127.0.0.1');
     test()->travelBack();
 
-    return Shop::firstWhere('email', strtolower($email));
+    $shop = Shop::firstWhere('email', strtolower($email));
+
+    return $vetted ? tap($shop)->update(['vetted_at' => $shop->vetted_at ?? now()]) : $shop;
 }
 
 it('creates one shop per email and links confirmed records to it', function () {

@@ -25,7 +25,11 @@
                                     @case('soon') <span class="badge-amber">Expires {{ $doc->expires_on->format('M j') }}</span> @break
                                     @case('ok') <span class="badge-gray">Until {{ $doc->expires_on->format('M Y') }}</span> @break
                                 @endswitch
-                                <button wire:click="delete({{ $doc->id }})" wire:confirm="Delete “{{ $doc->name }}”?" class="rounded-lg p-2 text-muted hover:bg-danger-soft hover:text-danger" title="Delete"><x-heroicon-m-trash class="size-4" /></button>
+                                @if ($doc->ownership_id === $currentOwnershipId)
+                                    <button wire:click="delete({{ $doc->id }})" wire:confirm="Delete “{{ $doc->name }}”?" class="rounded-lg p-2 text-muted hover:bg-danger-soft hover:text-danger" title="Delete"><x-heroicon-m-trash class="size-4" /></button>
+                                @else
+                                    <span class="badge-gray" title="Uploaded by a previous owner — part of the car's history">Previous owner</span>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

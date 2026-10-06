@@ -25,12 +25,14 @@ class Reminder extends Model
 
     protected $fillable = [
         'vehicle_id', 'task', 'interval_miles', 'interval_months', 'last_done_on', 'last_done_mileage', 'notified_at',
+        'last_done_record_id', 'baseline_done_on', 'baseline_done_mileage',
     ];
 
     protected function casts(): array
     {
         return [
             'last_done_on' => 'date',
+            'baseline_done_on' => 'date',
             'notified_at' => 'datetime',
         ];
     }
@@ -59,13 +61,15 @@ class Reminder extends Model
 
     public function status(?int $currentMileage = null): string
     {
-        if ($this->last_done_on === null && $this->last_done_mileage === null) {
+        $dueMileage = $this->dueMileage();
+        $dueDate = $this->dueDate();
+
+        // Nothing to measure against: never done, or done on an axis this reminder has no interval for.
+        if ($dueMileage === null && $dueDate === null) {
             return self::UNKNOWN;
         }
 
         $mileage = $currentMileage ?? $this->vehicle->current_mileage;
-        $dueMileage = $this->dueMileage();
-        $dueDate = $this->dueDate();
 
         if (($dueMileage !== null && $mileage >= $dueMileage) || ($dueDate?->isPast())) {
             return self::OVERDUE;
@@ -109,7 +113,9 @@ class Reminder extends Model
     public function dueLabel(?int $currentMileage = null): string
     {
         if ($this->status($currentMileage) === self::UNKNOWN) {
-            return 'No record yet';
+            return $this->last_done_on === null && $this->last_done_mileage === null
+                ? 'No record yet'
+                : 'needs the '.($this->interval_miles ? 'mileage' : 'date').' it was last done';
         }
 
         return collect([

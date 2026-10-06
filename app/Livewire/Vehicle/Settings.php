@@ -73,6 +73,13 @@ class Settings extends Component
             return null;
         }
 
+        // History from earlier owners isn't yours to erase (and deleting it would let the VIN start over clean).
+        if ($this->vehicle->ownerships()->count() > 1 || Deal::where('vehicle_id', $this->vehicle->getKey())->where('status', DealStatus::Completed)->exists()) {
+            $this->addError('confirmVin', 'This passport carries history from previous owners, so it can\'t be deleted. If you no longer have the car, sell it through a deal so the history goes to the next owner.');
+
+            return null;
+        }
+
         $this->vehicle->delete();
         session()->flash('toast', 'Passport deleted.');
 

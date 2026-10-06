@@ -2,7 +2,7 @@
 
 @switch($record->evidence())
     @case('verified')
-        <span {{ $attributes->class('stamp border-verified text-verified') }} title="Confirmed by {{ $record->provider_name ?? 'the shop' }} on {{ $record->verified_at->format('M j, Y') }}">
+        <span {{ $attributes->class('stamp border-verified text-verified') }} title="Confirmed by {{ $record->shop?->name ?? $record->provider_name ?? 'the shop' }} on {{ $record->verified_at->format('M j, Y') }}">
             <x-heroicon-s-check-badge class="size-3.5" /> Shop verified
         </span>
         @break
