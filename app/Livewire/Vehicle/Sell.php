@@ -104,6 +104,12 @@ class Sell extends Component
 
         $listing = $this->vehicle->openListing;
 
+        if (! $listing && $this->removedListing()) {
+            $this->addError('publish', 'Trust & safety removed your last listing for this car, so it can\'t be listed again. Contact support if you think that was a mistake.');
+
+            return;
+        }
+
         if ($listing) {
             $listing->update($attributes);
         } else {
@@ -139,6 +145,15 @@ class Sell extends Component
         $this->dispatch('toast', message: 'Listing withdrawn.');
     }
 
+    private function removedListing(): ?Listing
+    {
+        return $this->vehicle->listings()
+            ->where('seller_id', Auth::id())
+            ->where('status', ListingStatus::Removed)
+            ->latest('updated_at')
+            ->first();
+    }
+
     public function render(ListingPublisher $publisher)
     {
         $listing = $this->vehicle->openListing()->with(['deals' => fn ($q) => $q->with('buyer', 'pendingOffer')])->first();
@@ -147,6 +162,7 @@ class Sell extends Component
 
         return view('livewire.vehicle.sell', [
             'listing' => $listing,
+            'removed' => $listing ? null : $this->removedListing(),
             'blockers' => $publisher->blockers($draft),
             'gallery' => $this->vehicle->photos()->get(),
             'states' => UsStates::ALL,

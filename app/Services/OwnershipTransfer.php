@@ -24,6 +24,9 @@ class OwnershipTransfer
     public function complete(Deal $deal): void
     {
         DB::transaction(function () use ($deal) {
+            $deal = Deal::whereKey($deal->getKey())->lockForUpdate()->first();
+            app(DealFlow::class)->ensureTransferable($deal);
+
             $vehicle = $deal->vehicle;
             $current = $vehicle->currentOwnership;
             $today = now()->toDateString();
@@ -59,10 +62,11 @@ class OwnershipTransfer
             $deal->update(['status' => DealStatus::Completed, 'completed_at' => now()]);
             $deal->listing->update(['status' => ListingStatus::Sold, 'sold_at' => now()]);
 
-            Deal::where('listing_id', $deal->listing_id)
-                ->whereKeyNot($deal->getKey())
-                ->whereIn('status', [DealStatus::Open, DealStatus::Agreed])
-                ->update(['status' => DealStatus::Cancelled, 'cancelled_at' => now(), 'cancel_reason' => 'Car sold to another buyer']);
+            // Every other conversation about this car — on this listing or an older one — ends here.
+            app(DealFlow::class)->cancelOthers($vehicle->getKey(), $deal->getKey(), 'The car was sold to another buyer');
+            $vehicle->listings()->whereKeyNot($deal->listing_id)
+                ->whereIn('status', [ListingStatus::Draft, ListingStatus::Active, ListingStatus::Pending])
+                ->update(['status' => ListingStatus::Withdrawn]);
 
             app(DealFlow::class)->system($deal, "Sale complete. The passport now belongs to Owner {$next->owner_number}.");
         });

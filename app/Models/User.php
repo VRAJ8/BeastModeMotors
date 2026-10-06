@@ -15,6 +15,9 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable implements FilamentUser
 {
+    /** Shown in place of someone who has deleted their account (deals and listings outlive them). */
+    public const DELETED = 'Deleted account';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -107,6 +110,10 @@ class User extends Authenticatable implements FilamentUser
      */
     public function publicName(): string
     {
+        if (! $this->exists) {
+            return self::DELETED;
+        }
+
         $parts = preg_split('/\s+/', trim($this->name)) ?: [];
         $first = array_shift($parts) ?? 'Member';
         $last = array_pop($parts);

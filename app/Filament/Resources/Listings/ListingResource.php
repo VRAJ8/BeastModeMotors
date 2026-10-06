@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Listings;
 use App\Enums\ListingStatus;
 use App\Filament\Resources\Listings\Pages\ManageListings;
 use App\Models\Listing;
+use App\Services\DealFlow;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -60,15 +61,29 @@ class ListingResource extends Resource
                     ->schema([Textarea::make('reason')->label('Reason (shown to the seller)')->required()->maxLength(255)])
                     ->action(fn (Listing $record, array $data) => static::remove($record, $data['reason'])),
                 Action::make('restore')->icon('heroicon-o-arrow-uturn-left')->color('gray')
-                    ->visible(fn (Listing $record) => $record->status === ListingStatus::Removed)
+                    ->visible(fn (Listing $record) => static::canRelist($record))
                     ->requiresConfirmation()
-                    ->action(fn (Listing $record) => $record->update(['status' => ListingStatus::Active, 'removed_reason' => null])),
+                    ->action(fn (Listing $record) => static::canRelist($record->fresh())
+                        ? $record->update(['status' => ListingStatus::Active, 'removed_reason' => null])
+                        : null),
             ]);
+    }
+
+    /**
+     * Only put a listing back if the seller still owns the car and hasn't listed it again since.
+     */
+    public static function canRelist(Listing $listing): bool
+    {
+        return $listing->status === ListingStatus::Removed
+            && $listing->vehicle->user_id === $listing->seller_id
+            && ! $listing->vehicle->listings()->whereKeyNot($listing->getKey())
+                ->whereIn('status', [ListingStatus::Draft, ListingStatus::Active, ListingStatus::Pending])->exists();
     }
 
     public static function remove(Listing $listing, string $reason): void
     {
         $listing->update(['status' => ListingStatus::Removed, 'removed_reason' => $reason]);
+        app(DealFlow::class)->cancelAll($listing->deals()->getQuery(), 'Trust & safety removed this listing');
         $listing->shareLink?->update(['revoked_at' => now()]);
         $listing->reports()->where('status', 'open')->update(['status' => 'actioned']);
     }

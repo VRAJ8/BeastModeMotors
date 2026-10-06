@@ -27,7 +27,7 @@ return new class extends Migration
         Schema::create('listings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('vehicle_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('seller_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('seller_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('share_link_id')->nullable()->constrained()->nullOnDelete();
             $table->string('slug')->unique();
             $table->string('status', 20)->default('draft');
@@ -69,8 +69,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('listing_id')->constrained()->cascadeOnDelete();
             $table->foreignId('vehicle_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('buyer_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('seller_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('buyer_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('seller_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('status', 20)->default('open');
             $table->unsignedBigInteger('agreed_price_cents')->nullable();
             $table->unsignedInteger('sale_mileage')->nullable();

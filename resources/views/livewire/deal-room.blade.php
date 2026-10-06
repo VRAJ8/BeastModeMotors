@@ -77,7 +77,7 @@
             @if ($status->isActive())
                 <form wire:submit="send" class="flex gap-2 border-t border-line p-3">
                     <label for="body" class="sr-only">Message</label>
-                    <textarea id="body" wire:model="body" rows="1" class="input min-h-11 flex-1 resize-none" placeholder="Write a message…" @keydown.enter.prevent="if (!$event.shiftKey) $wire.send()"></textarea>
+                    <textarea id="body" wire:model="body" rows="1" class="input min-h-11 flex-1 resize-none" placeholder="Write a message…" @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"></textarea>
                     <button class="btn-primary" aria-label="Send"><x-heroicon-m-paper-airplane class="size-4" /></button>
                 </form>
                 @error('body') <p class="error px-4 pb-3">{{ $message }}</p> @enderror
@@ -156,6 +156,11 @@
 
     {{-- Right: offers / handover --}}
     <aside class="space-y-6 lg:sticky lg:top-24 lg:self-start">
+        @foreach (['offer', 'handover', 'cancel', 'cancelReason', 'note', 'results.*'] as $key)
+            @error($key)
+                <p class="rounded-xl bg-danger-soft p-3 text-sm font-medium text-danger" role="alert">{{ $message }}</p>
+            @enderror
+        @endforeach
         @if ($status === \App\Enums\DealStatus::Open)
             <section class="card card-pad">
                 <h3 class="panel-title">Price</h3>
@@ -186,7 +191,14 @@
                         <button class="btn-primary w-full">Send offer</button>
                     </form>
                 @else
-                    <p class="mt-4 rounded-xl bg-warn-soft p-3 text-sm text-warn">The seller has agreed a sale with someone else. You can keep talking in case it falls through.</p>
+                    <p class="mt-4 rounded-xl bg-warn-soft p-3 text-sm text-warn">
+                        @switch($deal->listing->status)
+                            @case(\App\Enums\ListingStatus::Pending) The seller has agreed a sale with someone else. You can keep talking in case it falls through. @break
+                            @case(\App\Enums\ListingStatus::Withdrawn) The seller has taken the car off the market. @break
+                            @case(\App\Enums\ListingStatus::Removed) This listing was removed by our trust & safety team. @break
+                            @default This car is no longer for sale.
+                        @endswitch
+                    </p>
                 @endif
 
                 @if ($offers->count() > ($pending ? 1 : 0))
@@ -241,6 +253,9 @@
                                     <input id="saleMileage" type="number" wire:model="saleMileage" class="input num">
                                     @error('sale_mileage') <p class="error">{{ $message }}</p> @enderror
                                 </div>
+                            @endif
+                            @if ($role === 'buyer' && $deal->seller_confirmed_at && $deal->sale_mileage)
+                                <p class="rounded-xl bg-paper p-3 text-sm">The seller recorded <strong class="num">{{ miles($deal->sale_mileage) }}</strong> at handover. Check it against the dashboard before you confirm.</p>
                             @endif
                             <p class="text-xs text-muted">{{ $theirConfirm ? $other->publicName().' has confirmed.' : '' }} When you both confirm, the passport transfers to {{ $role === 'buyer' ? 'you' : $other->publicName() }}.</p>
                             <button class="btn-accent w-full">Confirm sale complete</button>

@@ -1,7 +1,11 @@
 <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
     <div class="space-y-6">
-        @if ($listing?->status === \App\Enums\ListingStatus::Removed)
-            <div class="rounded-2xl bg-danger-soft p-4 text-sm text-danger">This listing was removed by our trust & safety team: {{ $listing->removed_reason }}</div>
+        @if ($removed)
+            <div class="rounded-2xl bg-danger-soft p-4 text-sm text-danger">
+                <p class="font-semibold">Your listing was removed by our trust & safety team.</p>
+                <p class="mt-1">{{ $removed->removed_reason }}</p>
+                <p class="mt-1">This car can't be listed again. Contact {{ config('passport.support_email') }} if you think this was a mistake.</p>
+            </div>
         @endif
 
         <section class="card card-pad">

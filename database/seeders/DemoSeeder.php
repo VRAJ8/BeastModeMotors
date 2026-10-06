@@ -636,7 +636,7 @@ class DemoSeeder extends Seeder
     {
         [$chris, $sam] = [$this->people['chris'], $this->people['sam']];
         $listing = $miata->listings()->create([
-            'seller_id' => $chris->id, 'status' => ListingStatus::Active, 'price_cents' => 2_450_000, 'mileage' => $miata->current_mileage,
+            'seller_id' => $chris->id, 'status' => ListingStatus::Pending, 'price_cents' => 2_450_000, 'mileage' => $miata->current_mileage,
             'city' => 'Austin', 'state' => 'TX', 'description' => 'Soul Red RF GT, six-speed manual. Dealer then independent specialist serviced. Selling because a baby seat does not fit.',
             'published_at' => now()->subMonths(5),
         ]);

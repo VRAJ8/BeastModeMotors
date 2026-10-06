@@ -55,7 +55,7 @@ class Deal extends Model
      */
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'buyer_id');
+        return $this->belongsTo(User::class, 'buyer_id')->withDefault(['name' => User::DELETED]);
     }
 
     /**
@@ -63,7 +63,7 @@ class Deal extends Model
      */
     public function seller(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'seller_id');
+        return $this->belongsTo(User::class, 'seller_id')->withDefault(['name' => User::DELETED]);
     }
 
     /**

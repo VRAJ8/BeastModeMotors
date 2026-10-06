@@ -53,7 +53,11 @@ class DealRoom extends Component
             $this->results = $inspection->results ?? [];
         }
 
-        $this->saleMileage = $this->deal->vehicle->current_mileage;
+        // Only the seller, mid-sale, needs the car's current odometer (as a starting point for the handover
+        // reading). Public properties are visible in the page, so nobody else gets it.
+        if ($this->deal->roleOf(Auth::user()) === 'seller' && $this->deal->status === DealStatus::Agreed) {
+            $this->saleMileage = $this->deal->vehicle->current_mileage;
+        }
     }
 
     private function role(): string
