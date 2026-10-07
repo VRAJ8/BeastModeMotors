@@ -32,6 +32,8 @@ class VehicleResource extends Resource
 
     protected static ?string $navigationLabel = 'Cars';
 
+    protected static ?string $modelLabel = 'car';
+
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'vin';

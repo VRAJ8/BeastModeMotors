@@ -5,6 +5,7 @@ use App\Enums\ReportStatus;
 use App\Filament\Resources\Listings\Pages\ManageListings;
 use App\Filament\Resources\Reports\Pages\ManageReports;
 use App\Models\User;
+use Filament\FontProviders\LocalFontProvider;
 use Livewire\Livewire;
 
 beforeEach(fn () => $this->admin = User::factory()->admin()->create());
@@ -45,4 +46,13 @@ it('removes a listing with a reason', function () {
         ->callTableAction('remove', $listing, ['reason' => 'Stolen photos']);
 
     expect($listing->fresh()->removed_reason)->toBe('Stolen photos');
+});
+
+it('keeps staff details and fonts on our own servers', function () {
+    $panel = Filament\Facades\Filament::getPanel('admin');
+    $staff = User::factory()->admin()->create(['name' => 'Morgan Hale']);
+
+    expect($panel->getFontProvider())->toBe(LocalFontProvider::class)
+        ->and(Filament\Facades\Filament::getUserAvatarUrl($staff))->toStartWith('data:image/svg+xml;base64,')
+        ->and(base64_decode(str(Filament\Facades\Filament::getUserAvatarUrl($staff))->after('base64,')))->toContain('>MH<');
 });

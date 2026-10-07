@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\AvatarProviders\InitialsAvatarProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -34,7 +35,8 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::hex('#ff5b14'),
                 'gray' => Color::Stone,
             ])
-            ->font('Inter')
+            // Inter is bundled with Filament and served locally; naming a font here would load it from Bunny Fonts.
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->sidebarCollapsibleOnDesktop()
             ->navigationGroups(['Marketplace', 'Passports', 'People'])
