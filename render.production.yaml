@@ -1,0 +1,111 @@
+# Production deploy on Render, with a Postgres database. See docs/LAUNCH.md for the full walkthrough.
+#
+# In Render: New → Blueprint, pick this repo, and set the Blueprint path to render.production.yaml.
+# Render then asks for every value marked `sync: false` below.
+#
+# The image runs the web server, a queue worker (emails) and the scheduler (reminders, recall checks, buyer
+# alerts, housekeeping) in one container, and runs database migrations on every deploy.
+services:
+  - type: web
+    name: beast-mode-motors
+    runtime: docker
+    plan: starter # an always-on instance: the free plan sleeps, which stops the scheduler and queue worker
+    region: oregon # must match the database's region
+    healthCheckPath: /up
+    autoDeploy: true
+    envVars:
+      # --- App -------------------------------------------------------------------------------------------
+      - key: APP_NAME
+        value: Beast Mode Motors
+      - key: APP_KEY
+        sync: false # base64:… from `php artisan key:generate --show` (see the guide). Never change it once live.
+      - key: APP_URL
+        sync: false # https://yourdomain.com (or https://beast-mode-motors.onrender.com until your domain is set up)
+      - key: TRUSTED_HOSTS
+        sync: false # beast-mode-motors.onrender.com, plus www.yourdomain.com if you use both
+      - key: APP_TIMEZONE
+        value: America/New_York
+      - key: SUPPORT_EMAIL
+        sync: false # where ownership reviews and support mail go, e.g. support@yourdomain.com
+      - key: PORT
+        value: "8080"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: LOG_LEVEL
+        value: info
+
+      # --- A real site, not the demo ------------------------------------------------------------------------
+      - key: DEMO_MODE
+        value: "false"
+      - key: DEMO_NIGHTLY_RESET
+        value: "false"
+
+      # --- Database, sessions, cache and queue ----------------------------------------------------------------
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: beast-mode-motors-db
+          property: connectionString
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+      # --- Email (Resend over SMTP) -----------------------------------------------------------------------
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.resend.com
+      - key: MAIL_PORT
+        value: "465"
+      - key: MAIL_SCHEME
+        value: smtps
+      - key: MAIL_USERNAME
+        value: resend
+      - key: MAIL_PASSWORD
+        sync: false # your Resend API key (re_…)
+      - key: MAIL_FROM_ADDRESS
+        sync: false # e.g. hello@yourdomain.com, on the domain you verified in Resend
+      - key: MAIL_FROM_NAME
+        value: Beast Mode Motors
+
+      # --- File storage (Cloudflare R2: a private bucket for receipts, a public one for photos) -------------
+      - key: DOCUMENTS_DISK
+        value: s3
+      - key: PHOTOS_DISK
+        value: s3-public
+      - key: AWS_DEFAULT_REGION
+        value: auto
+      - key: AWS_ENDPOINT
+        sync: false # https://<account-id>.r2.cloudflarestorage.com
+      - key: AWS_USE_PATH_STYLE_ENDPOINT
+        value: "true"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_BUCKET
+        sync: false # the PRIVATE bucket, e.g. bmm-receipts. Never turn on public access for it.
+      - key: AWS_PUBLIC_BUCKET
+        sync: false # the PUBLIC bucket, e.g. bmm-photos
+      - key: AWS_PUBLIC_URL
+        sync: false # the photos bucket's public URL, e.g. https://photos.yourdomain.com (no trailing slash)
+      - key: AWS_PUBLIC_ACL
+        value: "false" # R2 makes the whole photos bucket public, so no per-file permissions are sent
+
+      # --- Optional: read receipts with Claude --------------------------------------------------------------
+      - key: ANTHROPIC_API_KEY
+        sync: false # leave empty to hide the "Fill from receipt" button
+      - key: RECEIPT_SCANS_PER_DAY
+        value: "30"
+
+databases:
+  - name: beast-mode-motors-db
+    plan: basic-256mb
+    region: oregon
+    databaseName: beast_mode_motors
+    user: beast_mode_motors
+    postgresMajorVersion: "16"

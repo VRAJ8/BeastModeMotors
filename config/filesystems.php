@@ -60,19 +60,23 @@ return [
             'report' => false,
         ],
 
-        // Same bucket, public objects (car photos). AWS_PUBLIC_URL is the bucket's public base URL,
-        // e.g. an R2 r2.dev or custom domain.
+        // Car photos, which anyone can see. AWS_PUBLIC_URL is the public base URL they're served from.
+        // Two ways to set it up:
+        //  - A separate public bucket (AWS_PUBLIC_BUCKET, AWS_PUBLIC_ACL=false). Use this for Cloudflare R2, which
+        //    makes a whole bucket public or nothing, and for S3 buckets with ACLs disabled (the default since 2023).
+        //    Receipts stay in the private AWS_BUCKET.
+        //  - One bucket for both, with a public-read ACL on each photo (the default): needs a bucket that allows ACLs.
         's3-public' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
+            'bucket' => env('AWS_PUBLIC_BUCKET', env('AWS_BUCKET')),
             'url' => env('AWS_PUBLIC_URL', env('AWS_URL')),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'root' => 'public',
-            'visibility' => 'public',
+            'visibility' => env('AWS_PUBLIC_ACL', true) ? 'public' : 'private',
             'throw' => false,
             'report' => false,
         ],
