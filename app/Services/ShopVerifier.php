@@ -105,11 +105,15 @@ class ShopVerifier
         return $local.'@'.$domain;
     }
 
-    public function answer(ShopVerification $verification, bool $confirmed, string $responderName, ?string $note, ?string $ip): void
+    /**
+     * @param  ?string  $businessName  The shop's own name for itself, the first time it confirms: until then it's
+     *                                 known by whatever the first owner to ask typed in.
+     */
+    public function answer(ShopVerification $verification, bool $confirmed, string $responderName, ?string $note, ?string $ip, ?string $businessName = null): void
     {
         abort_unless($verification->isAnswerable(), 410, 'This verification link has expired or was already used.');
 
-        DB::transaction(function () use ($verification, $confirmed, $responderName, $note, $ip) {
+        DB::transaction(function () use ($verification, $confirmed, $responderName, $note, $ip, $businessName) {
             $record = ServiceRecord::whereKey($verification->service_record_id)->lockForUpdate()->firstOrFail();
 
             // A double-submitted form must not answer twice.
@@ -128,6 +132,12 @@ class ShopVerifier
                 $record->update(['disputed_at' => now(), 'verified_at' => null, 'shop_id' => null]);
             } elseif ($record->disputed_at === null) {
                 $record->update(['verified_at' => now(), 'shop_id' => $verification->shop_id]);
+            }
+
+            $shop = $verification->shop;
+
+            if ($confirmed && $shop && ! $shop->hasConfirmedName() && filled($businessName)) {
+                $shop->update(['name' => trim($businessName), 'name_confirmed_at' => now()]);
             }
         });
 

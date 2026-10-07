@@ -110,7 +110,7 @@ it('offers the profile link after a shop confirms', function () {
     $record = ServiceRecord::factory()->create(['vehicle_id' => car()->id]);
     $verification = app(ShopVerifier::class)->request($record, $record->vehicle->owner, 'Eastside', 'desk@eastside.test');
 
-    $this->post($verification->signedUrl(), ['decision' => 'confirm', 'responder_name' => 'Dee'])
+    $this->post($verification->signedUrl(), ['decision' => 'confirm', 'responder_name' => 'Dee', 'business_name' => 'Eastside Euro'])
         ->assertSee('Complete your profile');
 });
 

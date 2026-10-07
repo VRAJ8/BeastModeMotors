@@ -114,11 +114,14 @@ class User extends Authenticatable implements FilamentUser
             return self::DELETED;
         }
 
-        $parts = preg_split('/\s+/', trim($this->name)) ?: [];
-        $first = array_shift($parts) ?? 'Member';
-        $last = array_pop($parts);
+        $parts = preg_split('/\s+/', trim(strip_tags($this->name))) ?: [];
+        $first = array_shift($parts) ?: 'Member';
 
-        return $last ? $first.' '.Str::upper(Str::substr($last, 0, 1)).'.' : $first;
+        // The initial comes from the last word that starts with a letter: "Mary-Jo O'Neil Jr." → "Mary-Jo J.".
+        $initial = collect($parts)->reverse()->map(fn (string $word) => Str::substr($word, 0, 1))
+            ->first(fn (string $char) => preg_match('/\pL/u', $char) === 1);
+
+        return $initial ? $first.' '.Str::upper($initial).'.' : $first;
     }
 
     public function initials(): string

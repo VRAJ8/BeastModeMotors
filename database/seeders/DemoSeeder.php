@@ -448,7 +448,7 @@ class DemoSeeder extends Seeder
         ] as $email => [$city, $state, $phone, $website, $specialties, $about]) {
             Shop::where('email', $email)->update([
                 'city' => $city, 'state' => $state, 'phone' => $phone, 'website' => $website,
-                'specialties' => json_encode($specialties), 'about' => $about, 'profile_completed_at' => now()->subDays(mt_rand(5, 200)),
+                'specialties' => json_encode($specialties), 'about' => $about, 'profile_completed_at' => now()->subDays(mt_rand(5, 200)), 'name_confirmed_at' => now()->subDays(200),
                 // Each demo car has one owner per shop, so the directory's several-owners rule would hide them all.
                 'vetted_at' => now()->subDays(mt_rand(1, 60)),
             ]);

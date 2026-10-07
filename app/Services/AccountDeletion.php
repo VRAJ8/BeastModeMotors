@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Deletes an account without taking other people's history with it.
  *
- * A car whose passport holds someone else's history — an earlier owner, or a sale made here — stays registered
+ * A car whose passport holds someone else's history — an earlier owner, a sale made here, a shop's dispute — stays registered
  * with no owner: its records travel on to whoever owns it next, while this person's private things (costs,
  * personal paperwork, share links) are deleted. A car with only their own history is deleted outright.
  */
@@ -54,10 +54,14 @@ class AccountDeletion
         });
     }
 
+    /**
+     * History that isn't only this person's to erase: an earlier owner, a sale made here, or a shop's dispute.
+     */
     public static function hasSharedHistory(Vehicle $vehicle): bool
     {
         return $vehicle->ownerships()->count() > 1
-            || Deal::where('vehicle_id', $vehicle->getKey())->where('status', DealStatus::Completed)->exists();
+            || Deal::where('vehicle_id', $vehicle->getKey())->where('status', DealStatus::Completed)->exists()
+            || $vehicle->records()->whereNotNull('disputed_at')->exists();
     }
 
     /**

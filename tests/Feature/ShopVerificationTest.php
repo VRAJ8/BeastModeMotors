@@ -28,7 +28,7 @@ it('refuses unsigned or tampered links', function () {
 });
 
 it('stamps the record when the shop confirms and tells the owner', function () {
-    $this->post($this->verification->signedUrl(), ['decision' => 'confirm', 'responder_name' => 'Dee'])
+    $this->post($this->verification->signedUrl(), ['decision' => 'confirm', 'responder_name' => 'Dee', 'business_name' => 'Main Street Auto'])
         ->assertOk()
         ->assertSee('Thank you');
 
@@ -49,7 +49,7 @@ it('requires a reason to dispute, then marks the record disputed', function () {
 });
 
 it('can only be answered once', function () {
-    $this->post($this->verification->signedUrl(), ['decision' => 'confirm', 'responder_name' => 'Dee']);
+    $this->post($this->verification->signedUrl(), ['decision' => 'confirm', 'responder_name' => 'Dee', 'business_name' => 'Main Street Auto']);
     $this->post($this->verification->signedUrl(), ['decision' => 'dispute', 'responder_name' => 'Eve', 'response_note' => 'x'])->assertStatus(410);
 
     expect($this->record->fresh()->evidence())->toBe('verified');

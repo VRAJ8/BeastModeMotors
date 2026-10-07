@@ -40,6 +40,16 @@
                     </label>
                 </fieldset>
                 <div class="mt-5 grid gap-4">
+                    @if ($verification->shop && ! $verification->shop->hasConfirmedName())
+                        <div x-show="decision === 'confirm'">
+                            <label class="label" for="business_name">Your shop's name</label>
+                            <input id="business_name" name="business_name" value="{{ old('business_name', $verification->shop->name) }}" class="input" maxlength="120">
+                            <p class="hint">The customer typed this in. Correct it if needed: it's how your shop appears on confirmed records and in our directory.</p>
+                            @error('business_name') <p class="error">{{ $message }}</p> @enderror
+                        </div>
+                    @elseif ($verification->shop)
+                        <p class="text-sm text-ink-soft">Answering as <strong>{{ $verification->shop->name }}</strong>.</p>
+                    @endif
                     <div>
                         <label class="label" for="responder_name">Your name</label>
                         <input id="responder_name" name="responder_name" value="{{ old('responder_name') }}" class="input" required>

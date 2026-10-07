@@ -50,3 +50,16 @@ if (! function_exists('md')) {
         return preg_replace('/([\\\\`*_{}\[\]()#+\-.!|<>~])/', '\\\\$1', (string) $text);
     }
 }
+
+if (! function_exists('md_plain')) {
+    /**
+     * The plain-text twin of an email body: undo md()'s escaping and drop **bold** markers, so the text part
+     * reads like the HTML one instead of showing backslashes.
+     */
+    function md_plain(?string $markdown): string
+    {
+        $text = preg_replace('/\\\\([\\\\`*_{}\[\]()#+\-.!|<>~])/', '$1', (string) $markdown);
+
+        return preg_replace('/\*\*(.+?)\*\*/s', '$1', $text);
+    }
+}

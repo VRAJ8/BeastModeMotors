@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\ServiceRecord;
+use App\Models\User;
 use App\Notifications\VerifyServiceRecord;
 use App\Services\ShopVerifier;
+use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -45,3 +47,28 @@ it('caps how many verification emails an owner can send per day', function () {
     expect(fn () => app(ShopVerifier::class)->request($record, $vehicle->owner, 'Shop 11', 'shop11@shop.test'))
         ->toThrow(ValidationException::class);
 });
+
+it('sends a plain-text part that reads like the email, without markdown escapes', function () {
+    Notification::fake();
+    $record = ServiceRecord::factory()->create(['vehicle_id' => car()->id, 'title' => 'Brake pads & rotors (front)']);
+    $record->vehicle->owner->update(['name' => 'Alex O\'Brien']);
+    $verification = app(ShopVerifier::class)->request($record, $record->vehicle->owner, 'Eastside', 'desk@eastside.test');
+
+    $mail = (new VerifyServiceRecord($verification))->toMail(new AnonymousNotifiable);
+    $text = (string) app(Markdown::class)->renderText('notifications::email', $mail->data());
+
+    expect($text)->toContain('Brake pads & rotors (front)')
+        ->and($text)->toContain('Alex O\'Brien has logged work')
+        ->and($text)->not->toContain('\\(')
+        ->and($text)->not->toContain('**');
+});
+
+it('gives everyone a sensible short public name, whatever they typed', function (string $name, string $public) {
+    expect(User::factory()->create(['name' => $name])->publicName())->toBe($public);
+})->with([
+    ['Alex Rivera', 'Alex R.'],
+    ['Cher', 'Cher'],
+    ['Alex O\'Brien [*test*] <b>x</b>.', 'Alex X.'],
+    ['Sam 123 !!!', 'Sam'],
+    ['Zoë Ångström', 'Zoë Å.'],
+]);

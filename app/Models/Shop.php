@@ -25,7 +25,7 @@ class Shop extends Model
     /** Distinct owners a shop must have confirmed work for before it is listed without staff vetting. */
     public const MIN_CUSTOMERS = 2;
 
-    protected $fillable = ['name', 'slug', 'email', 'city', 'state', 'phone', 'website', 'about', 'specialties', 'is_listed', 'vetted_at', 'profile_completed_at'];
+    protected $fillable = ['name', 'slug', 'email', 'city', 'state', 'phone', 'website', 'about', 'specialties', 'is_listed', 'vetted_at', 'profile_completed_at', 'name_confirmed_at'];
 
     protected function casts(): array
     {
@@ -34,6 +34,7 @@ class Shop extends Model
             'is_listed' => 'boolean',
             'vetted_at' => 'datetime',
             'profile_completed_at' => 'datetime',
+            'name_confirmed_at' => 'datetime',
         ];
     }
 
@@ -91,6 +92,14 @@ class Shop extends Model
             'name' => $name,
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(4)),
         ]);
+    }
+
+    /**
+     * Whether the shop itself has stated its name, rather than an owner typing it in a verification request.
+     */
+    public function hasConfirmedName(): bool
+    {
+        return $this->name_confirmed_at !== null;
     }
 
     public function location(): ?string

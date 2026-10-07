@@ -81,6 +81,13 @@ class Settings extends Component
             return null;
         }
 
+        // A shop's "that wasn't us" is part of the car's story; deleting and re-adding the VIN must not erase it.
+        if ($this->vehicle->records()->whereNotNull('disputed_at')->exists()) {
+            $this->addError('confirmVin', 'A shop has disputed a record on this passport, and disputes stay with the car, so it can\'t be deleted. If you no longer have the car, sell it through a deal, or contact support.');
+
+            return null;
+        }
+
         $this->vehicle->delete();
         session()->flash('toast', 'Passport deleted.');
 

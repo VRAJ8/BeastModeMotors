@@ -68,7 +68,7 @@ class ShopController extends Controller
         $data['specialties'] = collect(explode(',', (string) ($data['specialties'] ?? '')))
             ->map(fn ($s) => trim($s))->filter()->take(8)->values()->all() ?: null;
 
-        $shop->update($data + ['profile_completed_at' => now()]);
+        $shop->update($data + ['profile_completed_at' => now(), 'name_confirmed_at' => now()]);
 
         return back()->with('toast', 'Profile saved.');
     }
