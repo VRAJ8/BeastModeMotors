@@ -43,8 +43,9 @@ services:
 #           property: connectionString
 # then set DEMO_MODE=false, DOCUMENTS_DISK=s3, PHOTOS_DISK=s3-public, the AWS_*
 # storage keys and an SMTP mailer (see .env.example), and set DEMO_NIGHTLY_RESET
-# to "false". If you add a custom domain, put the onrender.com hostname in
-# TRUSTED_HOSTS so health checks keep passing. The queue worker and scheduler
+# to "false". The service's own onrender.com name is always accepted. Before you
+# add a custom domain, put it in TRUSTED_HOSTS: Render's health checks switch to
+# it as soon as it's added (docs/LAUNCH.md, step 5). The queue worker and scheduler
 # already run inside the container (RUN_QUEUE_WORKER / RUN_SCHEDULER).
 # ---------------------------------------------------------------------------
 # databases:

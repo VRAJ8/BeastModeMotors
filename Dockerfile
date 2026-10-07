@@ -39,6 +39,7 @@ ENV PHP_OPCACHE_ENABLE=1 \
     APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
+    SCHEDULE_OUTPUT=/proc/1/fd/1 \
     QUEUE_CONNECTION=database
 
 WORKDIR /var/www/html

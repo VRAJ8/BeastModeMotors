@@ -3,11 +3,15 @@
 # In Render: New → Blueprint, pick this repo, and set the Blueprint path to render.production.yaml.
 # Render then asks for every value marked `sync: false` below.
 #
+# The names differ from the demo's (render.yaml), so this never touches a demo service you already run.
+# APP_URL and TRUSTED_HOSTS aren't set here: until you add your domain (guide step 5, in the dashboard), the app
+# uses the onrender.com address Render gives the service, which it always trusts.
+#
 # The image runs the web server, a queue worker (emails) and the scheduler (reminders, recall checks, buyer
 # alerts, housekeeping) in one container, and runs database migrations on every deploy.
 services:
   - type: web
-    name: beast-mode-motors
+    name: beast-mode-motors-prod
     runtime: docker
     plan: starter # an always-on instance: the free plan sleeps, which stops the scheduler and queue worker
     region: oregon # must match the database's region
@@ -19,10 +23,6 @@ services:
         value: Beast Mode Motors
       - key: APP_KEY
         sync: false # base64:… from `php artisan key:generate --show` (see the guide). Never change it once live.
-      - key: APP_URL
-        sync: false # https://yourdomain.com (or https://beast-mode-motors.onrender.com until your domain is set up)
-      - key: TRUSTED_HOSTS
-        sync: false # beast-mode-motors.onrender.com, plus www.yourdomain.com if you use both
       - key: APP_TIMEZONE
         value: America/New_York
       - key: SUPPORT_EMAIL
@@ -68,7 +68,7 @@ services:
       - key: MAIL_PASSWORD
         sync: false # your Resend API key (re_…)
       - key: MAIL_FROM_ADDRESS
-        sync: false # e.g. hello@yourdomain.com, on the domain you verified in Resend
+        sync: false # e.g. hello@yourdomain.com: the part after @ must be exactly the domain verified in Resend
       - key: MAIL_FROM_NAME
         value: Beast Mode Motors
 
@@ -97,8 +97,7 @@ services:
         value: "false" # R2 makes the whole photos bucket public, so no per-file permissions are sent
 
       # --- Optional: read receipts with Claude --------------------------------------------------------------
-      - key: ANTHROPIC_API_KEY
-        sync: false # leave empty to hide the "Fill from receipt" button
+      # Add ANTHROPIC_API_KEY in the dashboard to show the "Fill from receipt" button.
       - key: RECEIPT_SCANS_PER_DAY
         value: "30"
 
@@ -109,3 +108,6 @@ databases:
     databaseName: beast_mode_motors
     user: beast_mode_motors
     postgresMajorVersion: "16"
+    # Private network only: the app uses the internal connection string. To run psql from your machine, add
+    # `- source: <your-ip>/32` here for a while, then remove it.
+    ipAllowList: []

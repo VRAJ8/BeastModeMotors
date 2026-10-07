@@ -35,6 +35,9 @@ return [
     // Rebuild the demo (database and uploads) every night at 04:00. Only for a public demo deploy.
     'demo_nightly_reset' => (bool) env('DEMO_NIGHTLY_RESET', false),
 
+    // Where scheduled jobs write their output. The Docker image sets /proc/1/fd/1, the container's log.
+    'schedule_output' => env('SCHEDULE_OUTPUT') ?: '/dev/null',
+
     /*
     |--------------------------------------------------------------------------
     | NHTSA (US Department of Transportation) open data
