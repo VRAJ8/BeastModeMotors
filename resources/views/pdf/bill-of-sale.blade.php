@@ -52,7 +52,7 @@
     </table>
 
     <h2>Terms</h2>
-    <p>The seller confirms they are the legal owner of the vehicle described above, that it is free of all liens and encumbrances except as stated here: ______________________, and that they have the right to sell it. The seller certifies that, to the best of their knowledge, the odometer reading above reflects the actual mileage of the vehicle.</p>
+    <p>The seller confirms they are the legal owner of the vehicle described above, that it is free of all liens and encumbrances except as stated here: ______________________, and that they have the right to sell it. {{ $deal->odometer_status ? 'Odometer: '.$deal->odometer_status->certification() : 'The seller certifies the odometer reading at handover.' }}</p>
     <p>The vehicle is sold <strong>as is</strong>, without warranty of any kind, express or implied. The buyer acknowledges having had the opportunity to inspect the vehicle{{ $deal->inspection?->completed_at ? ' and recorded a pre-purchase inspection on '.$deal->inspection->completed_at->format('F j, Y') : '' }}.</p>
     <p>The vehicle's service history ({{ $deal->vehicle->records()->count() }} records) transfers to the buyer through Beast Mode Motors upon completion.</p>
 
@@ -60,6 +60,6 @@
         <tr><td>Seller signature &amp; date</td><td style="width: 10%; border: none"></td><td>Buyer signature &amp; date</td></tr>
     </table>
 
-    <p class="muted" style="margin-top: 40px; font-size: 9px">Some states require their own bill of sale form, notarisation or an odometer disclosure statement. Check your state's motor vehicle agency before registering. Beast Mode Motors is not a party to this sale and never holds funds.</p>
+    <p class="muted" style="margin-top: 40px; font-size: 9px">Some states require their own bill of sale form or notarisation. Check your state's motor vehicle agency before registering.{{ \App\Support\OdometerDisclosure::required($deal->vehicle, $deal->completed_at) ? ' Federal law also requires an odometer disclosure for this vehicle: download it from the deal room.' : '' }} Beast Mode Motors is not a party to this sale and never holds funds.</p>
 </body>
 </html>

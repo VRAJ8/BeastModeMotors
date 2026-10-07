@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DealStatus;
 use App\Models\Deal;
+use App\Support\OdometerDisclosure;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -39,5 +40,19 @@ class DealController extends Controller
         return Pdf::loadView('pdf.bill-of-sale', ['deal' => $deal])
             ->setPaper('letter')
             ->download('bill-of-sale-'.str($deal->vehicle->title())->slug().'.pdf');
+    }
+
+    /**
+     * The federal odometer disclosure statement, for cars that need one (see OdometerDisclosure).
+     */
+    public function odometerDisclosure(Deal $deal): Response
+    {
+        abort_unless(in_array($deal->status, [DealStatus::Agreed, DealStatus::Completed], true), 404);
+        $deal->load('vehicle', 'buyer', 'seller');
+        abort_unless(OdometerDisclosure::required($deal->vehicle, $deal->completed_at), 404);
+
+        return Pdf::loadView('pdf.odometer-disclosure', ['deal' => $deal])
+            ->setPaper('letter')
+            ->download('odometer-disclosure-'.str($deal->vehicle->title())->slug().'.pdf');
     }
 }

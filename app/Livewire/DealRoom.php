@@ -4,11 +4,14 @@ namespace App\Livewire;
 
 use App\Enums\DealStatus;
 use App\Enums\InspectionResult;
+use App\Enums\OdometerStatus;
 use App\Models\Deal;
 use App\Models\Offer;
 use App\Services\DealFlow;
+use App\Services\OdometerAnalyzer;
 use App\Services\ScamShield;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -24,6 +27,9 @@ class DealRoom extends Component
     public string $note = '';
 
     public ?int $saleMileage = null;
+
+    /** The seller's odometer certification for the handover reading. */
+    public string $odometerStatus = 'actual';
 
     public string $cancelReason = '';
 
@@ -140,7 +146,14 @@ class DealRoom extends Component
 
     public function confirm(DealFlow $flow)
     {
-        $done = $flow->confirm($this->deal, Auth::user(), $this->role() === 'seller' ? $this->saleMileage : null);
+        $status = OdometerStatus::Actual;
+
+        if ($this->role() === 'seller') {
+            $status = OdometerStatus::tryFrom($this->odometerStatus)
+                ?? throw ValidationException::withMessages(['odometer_status' => 'Choose how you certify the odometer reading.']);
+        }
+
+        $done = $flow->confirm($this->deal, Auth::user(), $this->role() === 'seller' ? $this->saleMileage : null, $status);
         $this->deal->refresh();
 
         if ($done) {
@@ -162,9 +175,10 @@ class DealRoom extends Component
         $this->reset('cancelling', 'cancelReason');
     }
 
-    public function render()
+    public function render(OdometerAnalyzer $odometer)
     {
         $user = Auth::user();
+        $role = $this->role();
 
         // Opening the room reads the other person's messages.
         $this->deal->messages()
@@ -176,13 +190,17 @@ class DealRoom extends Component
         $this->deal->load(['vehicle.photos', 'listing', 'buyer', 'seller', 'inspection', 'pendingOffer']);
 
         return view('livewire.deal-room', [
-            'role' => $this->role(),
+            'role' => $role,
             'me' => $user,
             'other' => $this->deal->counterparty($user),
             'messages' => $this->deal->messages()->with('user')->get(),
             'offers' => $this->deal->offers()->with('user')->get(),
             'checklist' => config('passport.inspection'),
             'resultOptions' => InspectionResult::options(),
+            // Before certifying, the seller sees any point where the passport's odometer went backwards.
+            'rollbacks' => $role === 'seller' && $this->deal->status === DealStatus::Agreed && ! $this->deal->seller_confirmed_at
+                ? $odometer->anomalies($this->deal->vehicle->readings()->get())
+                : [],
         ]);
     }
 }

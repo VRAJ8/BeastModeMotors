@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\DealStatus;
 use App\Enums\ListingStatus;
+use App\Enums\OdometerStatus;
 use App\Enums\OfferStatus;
 use App\Models\Deal;
 use App\Models\DealMessage;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Notifications\DealUpdate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -246,12 +248,15 @@ class DealFlow
     /**
      * Both sides confirm the sale is done. The second confirmation transfers ownership.
      */
-    public function confirm(Deal $deal, User $user, ?int $saleMileage = null): bool
+    /**
+     * The seller confirms with the handover odometer reading and their federal odometer certification for it.
+     */
+    public function confirm(Deal $deal, User $user, ?int $saleMileage = null, OdometerStatus $odometerStatus = OdometerStatus::Actual): bool
     {
         $this->ensureParticipant($deal, $user);
         $role = $deal->roleOf($user);
 
-        $completed = DB::transaction(function () use ($deal, $role, $saleMileage) {
+        $completed = DB::transaction(function () use ($deal, $role, $saleMileage, $odometerStatus) {
             // Both people can press "confirm" at the same moment: serialise on the deal row.
             $deal = Deal::whereKey($deal->getKey())->lockForUpdate()->first();
             $this->ensureTransferable($deal);
@@ -269,7 +274,7 @@ class DealFlow
                     ]);
                 }
 
-                $deal->update(['sale_mileage' => $saleMileage, 'seller_confirmed_at' => now()]);
+                $deal->update(['sale_mileage' => $saleMileage, 'odometer_status' => $odometerStatus, 'seller_confirmed_at' => now()]);
             } else {
                 if ($deal->seller_confirmed_at && $deal->sale_mileage < $current) {
                     // A newer reading arrived after the seller confirmed: their figure can't be right any more.
@@ -281,7 +286,7 @@ class DealFlow
                 $deal->update(['buyer_confirmed_at' => now()]);
             }
 
-            $this->system($deal, ucfirst($role).' confirmed the handover is complete'.($role === 'seller' ? ' at '.number_format($saleMileage).' mi.' : '.'));
+            $this->system($deal, ucfirst($role).' confirmed the handover is complete'.($role === 'seller' ? ' at '.number_format($saleMileage).' mi ('.Str::lower($odometerStatus->label()).').' : '.'));
 
             if ($deal->buyer_confirmed_at && $deal->seller_confirmed_at) {
                 $this->transfer->complete($deal);

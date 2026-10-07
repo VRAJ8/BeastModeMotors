@@ -664,7 +664,7 @@ class DemoSeeder extends Seeder
         $deal = Deal::create([
             'listing_id' => $listing->id, 'vehicle_id' => $miata->id, 'buyer_id' => $sam->id, 'seller_id' => $chris->id,
             'status' => DealStatus::Agreed, 'agreed_price_cents' => 2_380_000, 'agreed_at' => now()->subMonths(4)->subDays(6),
-            'sale_mileage' => $miata->current_mileage + 40, 'buyer_confirmed_at' => now()->subMonths(4), 'seller_confirmed_at' => now()->subMonths(4),
+            'sale_mileage' => $miata->current_mileage + 40, 'odometer_status' => 'actual', 'buyer_confirmed_at' => now()->subMonths(4), 'seller_confirmed_at' => now()->subMonths(4),
             'handover' => collect(config('passport.handover'))->map(fn () => now()->subMonths(4)->toIso8601String())->all(),
         ]);
         $this->message($deal, $sam, 'Hi Chris — is the RF still available? Could I see it this weekend?', now()->subMonths(4)->subDays(10));

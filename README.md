@@ -51,7 +51,7 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
   - Messages and offers, with counter-offers and 72-hour expiry.
   - A **pre-purchase inspection checklist** (18 points) for the buyer or their mechanic.
   - A **handover checklist** where each person ticks only their own steps.
-  - A generated **bill of sale** (PDF).
+  - A **paperwork** card: a generated **bill of sale** and, for cars that need one (model year 2011+ until they're 20), the federal **odometer disclosure statement**, filled in with the seller's handover reading and odometer certification. Plus a handover checklist that points to the state DMV rather than guessing at state rules.
 - **Scam shield.** Messages mentioning gift cards, wire transfers, fake escrow or shipping agents, "deployed overseas", verification codes or overpayment get flagged to the recipient with plain-English advice.
 - **Ownership transfer.** When both people confirm the handover, the passport moves to the buyer's garage as Owner N. Earlier owners' records become read-only, so a new owner can't rewrite the car's past. What travels with the car and what stays private:
 
@@ -120,7 +120,7 @@ Run it locally (below) or deploy it. Every account's password is `password`:
 | Interactivity | Livewire 4 + Alpine.js (no SPA build, no API layer) |
 | Back-office | Filament 5 |
 | Styling | Tailwind CSS 4 with design tokens; self-hosted Bricolage Grotesque, Inter and JetBrains Mono |
-| Documents | DomPDF (passport report, bill of sale), BaconQrCode (window sign) |
+| Documents | DomPDF (passport report, bill of sale, odometer disclosure), BaconQrCode (window sign) |
 | Receipt reading | Claude API via the official PHP SDK (`anthropic-ai/sdk`), structured JSON output |
 | Data | NHTSA vPIC (VIN decoding) and Recalls APIs, both free and keyless |
 | Database | SQLite (dev/demo); PostgreSQL in production — CI runs the full suite on both |
