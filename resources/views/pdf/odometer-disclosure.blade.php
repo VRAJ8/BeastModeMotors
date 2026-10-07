@@ -1,5 +1,3 @@
-@php($vehicle = $deal->vehicle)
-@php($chosen = $deal->odometer_status)
 <!DOCTYPE html>
 <html>
 <head>
@@ -23,7 +21,7 @@
 </head>
 <body>
     <h1>Odometer Disclosure Statement</h1>
-    <p class="muted">Reference BMM-{{ str_pad($deal->id, 6, '0', STR_PAD_LEFT) }} · Prepared {{ now()->format('F j, Y') }}</p>
+    <p class="muted">Reference {{ $reference }} · Prepared {{ now()->format('F j, Y') }}</p>
 
     <p class="notice">Federal law (and State law, if applicable) requires that you state the mileage upon transfer of ownership. Failure to complete or providing a false statement may result in fines and/or imprisonment. (49 U.S.C. 32705; 49 CFR Part 580)</p>
 
@@ -39,24 +37,24 @@
             <td colspan="2"><span class="label">Body type</span>{{ $vehicle->body ?: '____________________' }}</td>
         </tr>
         <tr>
-            <td colspan="2"><span class="label">Odometer reading (no tenths)</span><span class="mono" style="font-size: 15px">{{ $deal->sale_mileage ? number_format($deal->sale_mileage) : '____________' }}</span> miles</td>
-            <td colspan="2"><span class="label">Date of transfer</span>{{ $deal->completed_at?->format('F j, Y') ?? '____________________' }}</td>
+            <td colspan="2"><span class="label">Odometer reading (no tenths)</span><span class="mono" style="font-size: 15px">{{ $mileage ? number_format($mileage) : '____________' }}</span> miles</td>
+            <td colspan="2"><span class="label">Date of transfer</span>{{ $date?->format('F j, Y') ?? '____________________' }}</td>
         </tr>
     </table>
 
     <h2>Seller's certification</h2>
     <p>I, the seller, state that the odometer now reads the mileage above and, to the best of my knowledge, that:</p>
     <table class="cert">
-        @foreach (\App\Enums\OdometerStatus::cases() as $status)
-            <tr><td style="width: 22px"><span class="box">{{ $chosen === $status ? '☒' : '☐' }}</span></td><td>{{ $status->certification() }}</td></tr>
+        @foreach (\App\Enums\OdometerStatus::cases() as $option)
+            <tr><td style="width: 22px"><span class="box">{{ $status === $option ? '☒' : '☐' }}</span></td><td>{{ $option->certification() }}</td></tr>
         @endforeach
     </table>
 
     <h2>Parties</h2>
     <table>
         <tr>
-            <td style="width: 50%"><span class="label">Seller (transferor)</span><strong>{{ $deal->seller->name }}</strong><br>Address: ____________________________________<br>________________________________________</td>
-            <td><span class="label">Buyer (transferee)</span><strong>{{ $deal->buyer->name }}</strong><br>Address: ____________________________________<br>________________________________________</td>
+            <td style="width: 50%"><span class="label">Seller (transferor)</span><strong>{{ $sellerName }}</strong><br>Address: ____________________________________<br>________________________________________</td>
+            <td><span class="label">Buyer (transferee)</span><strong>{{ $buyerName ?? '____________________________' }}</strong><br>Address: ____________________________________<br>________________________________________</td>
         </tr>
     </table>
 

@@ -142,6 +142,8 @@
             </section>
         @endif
 
+        <livewire:vehicle.transfer :vehicle="$vehicle" />
+
         <section class="card card-pad">
             <p class="eyebrow">How selling works</p>
             <ol class="mt-3 space-y-3 text-sm text-ink-soft">

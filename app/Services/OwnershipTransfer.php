@@ -9,6 +9,9 @@ use App\Enums\ListingStatus;
 use App\Enums\OdometerSource;
 use App\Models\Deal;
 use App\Models\Document;
+use App\Models\Ownership;
+use App\Models\PassportTransfer;
+use App\Models\Vehicle;
 use App\Notifications\DealUpdate;
 use Illuminate\Support\Facades\DB;
 
@@ -28,42 +31,7 @@ class OwnershipTransfer
             app(DealFlow::class)->ensureTransferable($deal);
 
             $vehicle = $deal->vehicle;
-            $current = $vehicle->currentOwnership;
-            $today = now()->toDateString();
-
-            $current?->update(['ended_on' => $today, 'end_mileage' => $deal->sale_mileage]);
-
-            $vehicle->readings()->create([
-                'ownership_id' => $current?->getKey(),
-                'reading' => $deal->sale_mileage,
-                'recorded_on' => $today,
-                'source' => OdometerSource::Sale,
-            ]);
-
-            $next = $vehicle->ownerships()->create([
-                'user_id' => $deal->buyer_id,
-                'owner_number' => ($vehicle->ownerships()->max('owner_number') ?? 0) + 1,
-                'acquired_via' => AcquiredVia::Platform,
-                'started_on' => $today,
-                'start_mileage' => $deal->sale_mileage,
-                'purchase_price_cents' => $deal->agreed_price_cents,
-            ]);
-
-            Document::where('vehicle_id', $vehicle->getKey())
-                ->whereNotIn('type', collect(DocumentType::cases())->filter->transfersWithCar()->map->value->all())
-                ->get()
-                ->each->delete();
-
-            $vehicle->shareLinks()->whereNull('revoked_at')->update(['revoked_at' => now()]);
-
-            // Open verification requests stay open: the shop can still confirm the work, and its answer goes to the
-            // car's owner at that time (ShopVerifier::answer).
-
-            // Alerts already sent to the seller (a warranty or inspection running out) are news to the buyer.
-            $vehicle->reminders()->update(['notified_at' => null]);
-            $vehicle->documents()->update(['expiry_notified_at' => null]);
-            $vehicle->update(['user_id' => $deal->buyer_id, 'nickname' => null]);
-            $vehicle->refreshMileage();
+            $next = $this->handOver($vehicle, $deal->buyer_id, $deal->sale_mileage, AcquiredVia::Platform, $deal->agreed_price_cents);
 
             $deal->update(['status' => DealStatus::Completed, 'completed_at' => now()]);
             $deal->listing->update(['status' => ListingStatus::Sold, 'sold_at' => now()]);
@@ -79,5 +47,54 @@ class OwnershipTransfer
 
         $deal->buyer->notify(new DealUpdate($deal, "The {$deal->vehicle->title()} is yours", 'Its full history is now in your garage.', tone: 'success'));
         $deal->seller->notify(new DealUpdate($deal, "Sale complete: {$deal->vehicle->title()}", 'The passport has been transferred to the buyer.', tone: 'success'));
+    }
+
+    /**
+     * Move a car to its next owner. Callers hold a lock on the sale (a deal or a transfer link) and have checked
+     * the current owner still has the car; deals and listings are theirs to close.
+     */
+    public function handOver(Vehicle $vehicle, int $toUserId, int $mileage, AcquiredVia $via, ?int $priceCents): Ownership
+    {
+        $current = $vehicle->currentOwnership;
+        $today = now()->toDateString();
+
+        $current?->update(['ended_on' => $today, 'end_mileage' => $mileage]);
+
+        $vehicle->readings()->create([
+            'ownership_id' => $current?->getKey(),
+            'reading' => $mileage,
+            'recorded_on' => $today,
+            'source' => OdometerSource::Sale,
+        ]);
+
+        $next = $vehicle->ownerships()->create([
+            'user_id' => $toUserId,
+            'owner_number' => ($vehicle->ownerships()->max('owner_number') ?? 0) + 1,
+            'acquired_via' => $via,
+            'started_on' => $today,
+            'start_mileage' => $mileage,
+            'purchase_price_cents' => $priceCents,
+        ]);
+
+        Document::where('vehicle_id', $vehicle->getKey())
+            ->whereNotIn('type', collect(DocumentType::cases())->filter->transfersWithCar()->map->value->all())
+            ->get()
+            ->each->delete();
+
+        $vehicle->shareLinks()->whereNull('revoked_at')->update(['revoked_at' => now()]);
+
+        // A transfer link the old owner made can't hand over a car they no longer have.
+        PassportTransfer::where('vehicle_id', $vehicle->getKey())->open()->update(['cancelled_at' => now()]);
+
+        // Open verification requests stay open: the shop can still confirm the work, and its answer goes to the
+        // car's owner at that time (ShopVerifier::answer).
+
+        // Alerts already sent to the seller (a warranty or inspection running out) are news to the buyer.
+        $vehicle->reminders()->update(['notified_at' => null]);
+        $vehicle->documents()->update(['expiry_notified_at' => null]);
+        $vehicle->update(['user_id' => $toUserId, 'nickname' => null]);
+        $vehicle->refreshMileage();
+
+        return $next;
     }
 }

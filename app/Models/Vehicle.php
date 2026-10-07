@@ -124,6 +124,14 @@ class Vehicle extends Model
     }
 
     /**
+     * @return HasMany<PassportTransfer, $this>
+     */
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(PassportTransfer::class);
+    }
+
+    /**
      * @return HasMany<Listing, $this>
      */
     public function listings(): HasMany

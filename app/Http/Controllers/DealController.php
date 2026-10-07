@@ -51,7 +51,15 @@ class DealController extends Controller
         $deal->load('vehicle', 'buyer', 'seller');
         abort_unless(OdometerDisclosure::required($deal->vehicle, $deal->completed_at), 404);
 
-        return Pdf::loadView('pdf.odometer-disclosure', ['deal' => $deal])
+        return Pdf::loadView('pdf.odometer-disclosure', [
+            'reference' => 'BMM-'.str_pad($deal->id, 6, '0', STR_PAD_LEFT),
+            'vehicle' => $deal->vehicle,
+            'mileage' => $deal->sale_mileage,
+            'status' => $deal->odometer_status,
+            'date' => $deal->completed_at,
+            'sellerName' => $deal->seller->name,
+            'buyerName' => $deal->buyer->name,
+        ])
             ->setPaper('letter')
             ->download('odometer-disclosure-'.str($deal->vehicle->title())->slug().'.pdf');
     }
