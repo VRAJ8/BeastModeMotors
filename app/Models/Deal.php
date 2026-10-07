@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DealStatus;
+use App\Enums\OdometerStatus;
 use App\Enums\OfferStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Deal extends Model
 {
     protected $fillable = [
-        'listing_id', 'vehicle_id', 'buyer_id', 'seller_id', 'status', 'agreed_price_cents', 'sale_mileage', 'handover',
+        'listing_id', 'vehicle_id', 'buyer_id', 'seller_id', 'status', 'agreed_price_cents', 'sale_mileage', 'odometer_status', 'handover',
         'agreed_at', 'buyer_confirmed_at', 'seller_confirmed_at', 'completed_at', 'cancelled_at', 'cancelled_by',
         'cancel_reason',
     ];
@@ -25,6 +26,7 @@ class Deal extends Model
     {
         return [
             'status' => DealStatus::class,
+            'odometer_status' => OdometerStatus::class,
             'handover' => 'array',
             'agreed_at' => 'datetime',
             'buyer_confirmed_at' => 'datetime',

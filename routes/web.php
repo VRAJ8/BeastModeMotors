@@ -83,6 +83,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/deals', [DealController::class, 'index'])->name('deals.index');
     Route::get('/deals/{deal}', [DealController::class, 'show'])->name('deals.show')->middleware('can:view,deal');
     Route::get('/deals/{deal}/bill-of-sale.pdf', [DealController::class, 'billOfSale'])->name('deals.bill-of-sale')->middleware('can:view,deal');
+    Route::get('/deals/{deal}/odometer-disclosure.pdf', [DealController::class, 'odometerDisclosure'])->name('deals.odometer-disclosure')->middleware('can:view,deal');
 
     Route::get('/saved', [MarketplaceController::class, 'saved'])->name('saved');
 

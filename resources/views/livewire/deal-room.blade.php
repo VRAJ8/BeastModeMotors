@@ -216,10 +216,7 @@
 
         @if (in_array($status, [\App\Enums\DealStatus::Agreed, \App\Enums\DealStatus::Completed]))
             <section class="card card-pad">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="panel-title">Handover</h3>
-                    <a href="{{ route('deals.bill-of-sale', $deal) }}" class="btn-secondary btn-sm"><x-heroicon-m-document-arrow-down class="size-4" /> Bill of sale</a>
-                </div>
+                <h3 class="panel-title">Handover</h3>
                 <p class="mt-1 text-sm text-muted">Each person ticks their own steps. Both confirm at the end.</p>
                 <ul class="mt-4 space-y-2">
                     @foreach ($deal->handoverItems() as $key => $item)
@@ -253,9 +250,25 @@
                                     <input id="saleMileage" type="number" wire:model="saleMileage" class="input num">
                                     @error('sale_mileage') <p class="error">{{ $message }}</p> @enderror
                                 </div>
+                                <fieldset>
+                                    <legend class="label">Odometer certification</legend>
+                                    <p class="text-xs text-muted">Federal law makes you certify this reading on the odometer disclosure. Pick what's true.</p>
+                                    @if ($rollbacks)
+                                        <p class="mt-2 rounded-xl border border-warn/30 bg-warn-soft p-3 text-xs text-ink">This car's passport shows the odometer going backwards ({{ miles($rollbacks[0]['reading']) }} on {{ \Illuminate\Support\Carbon::parse($rollbacks[0]['date'])->format('M j, Y') }}, after {{ miles($rollbacks[0]['previous_max']) }}). If that was a typo, fix the record. If the odometer was replaced or reset, the reading isn't the actual mileage.</p>
+                                    @endif
+                                    <div class="mt-2 space-y-2">
+                                        @foreach (\App\Enums\OdometerStatus::cases() as $option)
+                                            <label class="flex items-start gap-2 rounded-xl border border-line p-3 text-sm has-[:checked]:border-ink" wire:key="os-{{ $option->value }}">
+                                                <input type="radio" wire:model="odometerStatus" value="{{ $option->value }}" class="mt-0.5">
+                                                <span><span class="font-medium">{{ $option->label() }}</span><span class="block text-xs text-muted">{{ $option->explanation() }}</span></span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    @error('odometer_status') <p class="error">{{ $message }}</p> @enderror
+                                </fieldset>
                             @endif
                             @if ($role === 'buyer' && $deal->seller_confirmed_at && $deal->sale_mileage)
-                                <p class="rounded-xl bg-paper p-3 text-sm">The seller recorded <strong class="num">{{ miles($deal->sale_mileage) }}</strong> at handover. Check it against the dashboard before you confirm.</p>
+                                <p @class(['rounded-xl p-3 text-sm', 'bg-paper' => $deal->odometer_status !== \App\Enums\OdometerStatus::NotActual, 'border border-danger/30 bg-danger-soft' => $deal->odometer_status === \App\Enums\OdometerStatus::NotActual])>The seller recorded <strong class="num">{{ miles($deal->sale_mileage) }}</strong> at handover and certified it as <strong>{{ Str::lower($deal->odometer_status?->label() ?? 'actual mileage') }}</strong>. Check it against the dashboard before you confirm.</p>
                             @endif
                             <p class="text-xs text-muted">{{ $theirConfirm ? $other->publicName().' has confirmed.' : '' }} When you both confirm, the passport transfers to {{ $role === 'buyer' ? 'you' : $other->publicName() }}.</p>
                             <button class="btn-accent w-full">Confirm sale complete</button>
@@ -263,6 +276,35 @@
                     @endif
                     @error('confirm') <p class="error">{{ $message }}</p> @enderror
                 @endif
+            </section>
+        @endif
+
+        @if (in_array($status, [\App\Enums\DealStatus::Agreed, \App\Enums\DealStatus::Completed]))
+            @php($exemption = \App\Support\OdometerDisclosure::exemption($vehicle, $deal->completed_at))
+            <section class="card card-pad">
+                <h3 class="panel-title">Paperwork</h3>
+                <p class="mt-1 text-sm text-muted">Print these, sign them together at handover, and each keep a copy.</p>
+                <ul class="mt-4 space-y-2 text-sm">
+                    <li class="flex items-center justify-between gap-3 rounded-xl border border-line p-3">
+                        <span><span class="font-medium">Bill of sale</span><span class="block text-xs text-muted">Price, date, both parties, sold as is.</span></span>
+                        <a href="{{ route('deals.bill-of-sale', $deal) }}" class="btn-secondary btn-sm shrink-0"><x-heroicon-m-document-arrow-down class="size-4" /> PDF</a>
+                    </li>
+                    <li class="flex items-center justify-between gap-3 rounded-xl border border-line p-3">
+                        <span><span class="font-medium">Odometer disclosure</span>
+                            <span class="block text-xs text-muted">{{ $exemption ?? ($deal->sale_mileage ? 'Filled in with the seller\'s handover reading and certification.' : 'Required by federal law for this car. It fills in when the seller confirms the handover reading.') }}</span></span>
+                        @unless ($exemption)
+                            <a href="{{ route('deals.odometer-disclosure', $deal) }}" class="btn-secondary btn-sm shrink-0"><x-heroicon-m-document-arrow-down class="size-4" /> PDF</a>
+                        @endunless
+                    </li>
+                </ul>
+                <h4 class="mt-5 text-xs font-semibold uppercase tracking-wide text-muted">At handover</h4>
+                <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink-soft">
+                    <li>The seller signs the title over to the buyer and fills in its odometer section with the same reading. If a lender holds the title, the loan is paid off and the title released first.</li>
+                    <li>The buyer has insurance in place before driving away.</li>
+                    <li>Plates, temporary tags and any notice-of-sale or release-of-liability filing for the seller vary by state.</li>
+                    <li>The buyer titles and registers the car, and pays any sales tax, with their state's DMV. Deadlines vary by state.</li>
+                </ul>
+                <p class="mt-3 text-xs text-muted">Check your state's DMV (motor vehicle agency) website for its forms and deadlines before you meet.</p>
             </section>
         @endif
 
