@@ -1,5 +1,14 @@
 <form wire:submit="save" class="grid gap-6 lg:grid-cols-[1fr_320px]">
     <div class="space-y-6">
+        @if ($scanNote)
+            <div class="flex gap-3 rounded-2xl border border-documented/30 bg-documented-soft p-4 text-sm text-documented" role="status">
+                <x-heroicon-m-sparkles class="size-5 shrink-0" />
+                <div>
+                    <p><strong>{{ $scanNote }}</strong></p>
+                    @if ($scanWarning) <p class="mt-1 font-semibold text-danger">{{ $scanWarning }}</p> @endif
+                </div>
+            </div>
+        @endif
         @if ($pending)
             <div class="flex gap-3 rounded-2xl border border-warn/30 bg-warn-soft p-4 text-sm text-warn">
                 <x-heroicon-m-clock class="size-5 shrink-0" />
@@ -151,10 +160,17 @@
             @endforeach
 
             @foreach ($receipts as $i => $file)
-                <div class="mt-3 flex items-center gap-2 rounded-xl border border-dashed border-line-strong p-2.5 text-sm" wire:key="upload-{{ $i }}">
-                    <x-heroicon-o-arrow-up-tray class="size-4 shrink-0 text-muted" />
-                    <span class="min-w-0 flex-1 truncate">{{ $file->getClientOriginalName() }}</span>
-                    <button type="button" wire:click="removeUpload({{ $i }})" class="text-muted hover:text-danger"><x-heroicon-m-x-mark class="size-4" /></button>
+                <div class="mt-3 rounded-xl border border-dashed border-line-strong p-2.5 text-sm" wire:key="upload-{{ $i }}">
+                    <div class="flex items-center gap-2">
+                        <x-heroicon-o-arrow-up-tray class="size-4 shrink-0 text-muted" />
+                        <span class="min-w-0 flex-1 truncate">{{ $file->getClientOriginalName() }}</span>
+                        <button type="button" wire:click="removeUpload({{ $i }})" class="text-muted hover:text-danger" title="Remove"><x-heroicon-m-x-mark class="size-4" /></button>
+                    </div>
+                    @if ($scanner)
+                        <button type="button" wire:click="scanReceipt({{ $i }})" wire:loading.attr="disabled" wire:target="scanReceipt" class="btn-secondary btn-sm mt-2 w-full">
+                            <x-heroicon-m-sparkles class="size-3.5" /> Fill from receipt
+                        </button>
+                    @endif
                 </div>
             @endforeach
 
@@ -165,7 +181,12 @@
                 <input type="file" wire:model="receipts" multiple accept=".pdf,image/*" class="sr-only">
             </label>
             <div wire:loading wire:target="receipts" class="mt-2 text-xs text-muted">Uploading…</div>
+            <div wire:loading wire:target="scanReceipt" class="mt-2 text-xs text-muted">Reading the receipt…</div>
+            @error('receipts') <p class="error">{{ $message }}</p> @enderror
             @error('receipts.*') <p class="error">{{ $message }}</p> @enderror
+            @if ($scanner)
+                <p class="hint">“Fill from receipt” sends the file to Claude (Anthropic) to read it. Nothing is saved until you press save.</p>
+            @endif
         </section>
 
         @if ($reminders->isNotEmpty())
