@@ -1,0 +1,9 @@
+#!/command/with-contenv sh
+# Sends queued email and in-app notifications. Set RUN_QUEUE_WORKER=false when a separate worker runs them.
+cd /var/www/html || exit 1
+
+if [ "${RUN_QUEUE_WORKER:-true}" != "true" ] || [ "${QUEUE_CONNECTION:-database}" = "sync" ]; then
+    exec sleep infinity
+fi
+
+exec php artisan queue:work --sleep=3 --tries=3 --backoff=60 --max-time=3600

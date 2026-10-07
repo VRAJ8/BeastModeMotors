@@ -1,0 +1,9 @@
+#!/command/with-contenv sh
+# Runs reminders, recall checks and housekeeping. Set RUN_SCHEDULER=false when a separate cron runs them.
+cd /var/www/html || exit 1
+
+if [ "${RUN_SCHEDULER:-true}" != "true" ]; then
+    exec sleep infinity
+fi
+
+exec php artisan schedule:work

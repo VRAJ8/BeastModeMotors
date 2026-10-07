@@ -1,0 +1,165 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\VerificationStatus;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+
+/**
+ * A repair shop, identified by the email address it answers verification requests from.
+ *
+ * Shops never sign up: a profile appears once they confirm their first record, and they edit it
+ * through a signed link — the same proof of email ownership the verification itself relies on.
+ */
+class Shop extends Model
+{
+    public const FAST_HOURS = 24;
+
+    public const FAST_MIN_ANSWERS = 3;
+
+    /** Distinct owners a shop must have confirmed work for before it is listed without staff vetting. */
+    public const MIN_CUSTOMERS = 2;
+
+    protected $fillable = ['name', 'slug', 'email', 'city', 'state', 'phone', 'website', 'about', 'specialties', 'is_listed', 'vetted_at', 'profile_completed_at', 'name_confirmed_at'];
+
+    protected function casts(): array
+    {
+        return [
+            'specialties' => 'array',
+            'is_listed' => 'boolean',
+            'vetted_at' => 'datetime',
+            'profile_completed_at' => 'datetime',
+            'name_confirmed_at' => 'datetime',
+        ];
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    /**
+     * @return HasMany<ShopVerification, $this>
+     */
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(ShopVerification::class);
+    }
+
+    /**
+     * Records this shop has confirmed.
+     *
+     * @return HasMany<ServiceRecord, $this>
+     */
+    public function records(): HasMany
+    {
+        return $this->hasMany(ServiceRecord::class)->whereNotNull('verified_at');
+    }
+
+    private ?bool $inDirectory = null;
+
+    public function isInDirectory(): bool
+    {
+        return $this->inDirectory ??= static::directory()->whereKey($this->getKey())->exists();
+    }
+
+    /**
+     * Shops shown in the public directory: not hidden by staff, with confirmed work, and either vetted by
+     * staff or vouched for by several different owners — one person with two mailboxes can't list a shop.
+     *
+     * @param  Builder<Shop>  $query
+     */
+    public function scopeDirectory(Builder $query): void
+    {
+        $query->where('is_listed', true)
+            ->whereHas('verifications', fn (Builder $v) => $v->where('status', VerificationStatus::Confirmed))
+            ->where(fn (Builder $q) => $q->whereNotNull('vetted_at')->orWhereRaw(
+                '(select count(distinct sv.requested_by) from shop_verifications sv where sv.shop_id = shops.id and sv.status = ?) >= ?',
+                [VerificationStatus::Confirmed->value, self::MIN_CUSTOMERS],
+            ));
+    }
+
+    public static function forEmail(string $email, string $name): self
+    {
+        $email = Str::lower(trim($email));
+
+        return static::firstOrCreate(['email' => $email], [
+            'name' => $name,
+            'slug' => Str::slug($name).'-'.Str::lower(Str::random(4)),
+        ]);
+    }
+
+    /**
+     * Whether the shop itself has stated its name, rather than an owner typing it in a verification request.
+     */
+    public function hasConfirmedName(): bool
+    {
+        return $this->name_confirmed_at !== null;
+    }
+
+    public function location(): ?string
+    {
+        return $this->city ? trim("{$this->city}, {$this->state}", ', ') : null;
+    }
+
+    /**
+     * @return HasMany<ServiceRecord, $this>
+     */
+    public function verifiedRecords(): HasMany
+    {
+        return $this->hasMany(ServiceRecord::class)->whereNotNull('verified_at');
+    }
+
+    /**
+     * Email with the local part hidden, for owners picking a shop from the directory.
+     */
+    public function maskedEmail(): string
+    {
+        [$local, $domain] = explode('@', $this->email) + [1 => ''];
+
+        return Str::substr($local, 0, 1).'•••@'.$domain;
+    }
+
+    public function editUrl(): string
+    {
+        return URL::temporarySignedRoute('shops.edit', now()->addDays(7), ['shop' => $this->getKey()]);
+    }
+
+    /**
+     * Track record built from answered verification requests.
+     *
+     * @return array{confirmed: int, disputed: int, answered: int, unanswered: int, response_rate: ?int, median_hours: ?float, fast: bool, cars: int, makes: Collection<int, string>}
+     */
+    public function stats(): array
+    {
+        $verifications = $this->relationLoaded('verifications') ? $this->verifications : $this->verifications()->get();
+        $answered = $verifications->whereIn('status', [VerificationStatus::Confirmed, VerificationStatus::Disputed]);
+        // A request past its deadline is unanswered whether or not housekeeping has marked it yet.
+        $unanswered = $verifications->filter(fn (ShopVerification $v) => $v->status === VerificationStatus::Expired
+            || ($v->status === VerificationStatus::Pending && $v->expires_at->isPast()));
+
+        $hours = $answered->map(fn (ShopVerification $v) => $v->created_at->diffInMinutes($v->responded_at) / 60)->sort()->values();
+        $median = $hours->isEmpty() ? null : round($hours->median(), 1);
+        $closed = $answered->count() + $unanswered->count();
+
+        $records = $this->relationLoaded('verifiedRecords') ? $this->verifiedRecords : $this->verifiedRecords()->with('vehicle:id,make')->get();
+        $vehicles = $records->pluck('vehicle')->filter()->unique('id');
+
+        return [
+            'confirmed' => $answered->where('status', VerificationStatus::Confirmed)->count(),
+            'disputed' => $answered->where('status', VerificationStatus::Disputed)->count(),
+            'answered' => $answered->count(),
+            'unanswered' => $unanswered->count(),
+            'response_rate' => $closed ? (int) round($answered->count() / $closed * 100) : null,
+            'median_hours' => $median,
+            'fast' => $median !== null && $median <= self::FAST_HOURS && $answered->count() >= self::FAST_MIN_ANSWERS,
+            'cars' => $vehicles->count(),
+            'makes' => $vehicles->countBy('make')->sortDesc()->keys()->take(5)->values(),
+        ];
+    }
+}

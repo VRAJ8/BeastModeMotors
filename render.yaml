@@ -1,0 +1,53 @@
+# One-click demo deploy on Render: https://render.com/deploy
+# Runs as a self-contained demo (SQLite, re-seeded on every fresh boot and rebuilt nightly). The image runs a
+# queue worker and the scheduler next to the web server, so emails, reminders and expiry all work.
+# For a persistent production setup, add a Postgres database and set DB_* vars.
+services:
+  - type: web
+    name: beast-mode-motors
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Beast Mode Motors
+      - key: APP_KEY
+        sync: false # paste the output of: php artisan key:generate --show
+      - key: APP_URL
+        sync: false # e.g. https://beast-mode-motors.onrender.com
+      - key: PORT
+        value: "8080"
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_NIGHTLY_RESET
+        value: "true"
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: MAIL_MAILER
+        value: log
+      - key: APP_TIMEZONE
+        value: America/New_York
+
+# ---------------------------------------------------------------------------
+# Going to production? Uncomment the database below and, on the web service,
+# set DB_CONNECTION to pgsql and add:
+#       - key: DB_URL
+#         fromDatabase:
+#           name: beast-mode-motors-db
+#           property: connectionString
+# then set DEMO_MODE=false, DOCUMENTS_DISK=s3, PHOTOS_DISK=s3-public, the AWS_*
+# storage keys and an SMTP mailer (see .env.example), and set DEMO_NIGHTLY_RESET
+# to "false". If you add a custom domain, put the onrender.com hostname in
+# TRUSTED_HOSTS so health checks keep passing. The queue worker and scheduler
+# already run inside the container (RUN_QUEUE_WORKER / RUN_SCHEDULER).
+# ---------------------------------------------------------------------------
+# databases:
+#   - name: beast-mode-motors-db
+#     plan: free
+#     databaseName: beast_mode_motors

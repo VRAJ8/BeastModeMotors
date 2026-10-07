@@ -1,0 +1,383 @@
+<?php
+
+namespace App\Services;
+
+use App\Enums\DealStatus;
+use App\Enums\ListingStatus;
+use App\Enums\OfferStatus;
+use App\Models\Deal;
+use App\Models\DealMessage;
+use App\Models\Listing;
+use App\Models\Offer;
+use App\Models\User;
+use App\Notifications\DealUpdate;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Every state change in a private sale goes through here, so the rules live in one place:
+ * talk → offer / counter → agree → inspect → hand over → both confirm → ownership transfers.
+ */
+class DealFlow
+{
+    public const OFFER_HOURS = 72;
+
+    /** How far past the last recorded reading a handover reading may be (a test drive, a delivery trip…). */
+    public const MAX_HANDOVER_MILES = 2500;
+
+    public function __construct(private ScamShield $shield, private OwnershipTransfer $transfer) {}
+
+    public function start(Listing $listing, User $buyer, string $message): Deal
+    {
+        if ($listing->status !== ListingStatus::Active) {
+            throw ValidationException::withMessages(['message' => 'This car isn\'t taking new enquiries.']);
+        }
+
+        if ($listing->seller_id === $buyer->getKey()) {
+            throw ValidationException::withMessages(['message' => 'You can\'t start a deal on your own car.']);
+        }
+
+        $deal = Deal::where('listing_id', $listing->getKey())
+            ->where('buyer_id', $buyer->getKey())
+            ->whereIn('status', [DealStatus::Open, DealStatus::Agreed])
+            ->first();
+
+        $deal ??= Deal::create([
+            'listing_id' => $listing->getKey(),
+            'vehicle_id' => $listing->vehicle_id,
+            'buyer_id' => $buyer->getKey(),
+            'seller_id' => $listing->seller_id,
+            'status' => DealStatus::Open,
+        ]);
+
+        $this->post($deal, $buyer, $message);
+
+        return $deal;
+    }
+
+    public function post(Deal $deal, User $author, string $body): DealMessage
+    {
+        $this->ensureParticipant($deal, $author);
+
+        if (! $deal->status->isActive()) {
+            throw ValidationException::withMessages(['body' => 'This deal is closed.']);
+        }
+
+        $flags = $this->shield->scan($body);
+
+        $message = $deal->messages()->create([
+            'user_id' => $author->getKey(),
+            'body' => trim($body),
+            'risk_flags' => $flags ?: null,
+        ]);
+
+        $deal->touch();
+
+        $this->tell($deal->counterparty($author), new DealUpdate(
+            $deal,
+            "New message from {$author->publicName()} about the {$deal->vehicle->title()}",
+            // A flagged message is only shown in the room, next to the scam shield's warning.
+            $flags ? 'Open the deal room to read it — our scam shield flagged something in it.' : str($body)->limit(140)->toString(),
+            email: false,
+        ));
+
+        return $message;
+    }
+
+    public function offer(Deal $deal, User $author, int $amountCents, ?string $note = null): Offer
+    {
+        $this->ensureParticipant($deal, $author);
+
+        if ($deal->status !== DealStatus::Open || $deal->listing->status !== ListingStatus::Active) {
+            throw ValidationException::withMessages(['amount' => 'Offers can only be made while the car is still for sale.']);
+        }
+
+        if ($amountCents < 50000) {
+            throw ValidationException::withMessages(['amount' => 'Enter a realistic amount.']);
+        }
+
+        return DB::transaction(function () use ($deal, $author, $amountCents, $note) {
+            // A new offer replaces whatever was on the table: a counter if it came from the other side.
+            if ($previous = $deal->pendingOffer) {
+                $previous->update([
+                    'status' => $previous->user_id === $author->getKey() ? OfferStatus::Withdrawn : OfferStatus::Countered,
+                    'responded_at' => now(),
+                ]);
+            }
+
+            $offer = $deal->offers()->create([
+                'user_id' => $author->getKey(),
+                'amount_cents' => $amountCents,
+                'note' => $note,
+                'status' => OfferStatus::Pending,
+                'expires_at' => now()->addHours(self::OFFER_HOURS),
+            ]);
+
+            $role = $deal->roleOf($author);
+            $verb = $previous && $previous->user_id !== $author->getKey() ? 'countered with' : 'offered';
+            $this->system($deal, ucfirst($role)." {$verb} ".money($amountCents).'.');
+            $this->quote($deal, $author, $note);
+
+            $this->tell($deal->counterparty($author), new DealUpdate(
+                $deal,
+                "{$author->publicName()} {$verb} ".money($amountCents)." for the {$deal->vehicle->title()}",
+                'The offer is open for '.self::OFFER_HOURS.' hours.',
+            ));
+
+            return $offer;
+        });
+    }
+
+    public function respond(Offer $offer, User $responder, bool $accept): void
+    {
+        $deal = $offer->deal;
+        $this->ensureParticipant($deal, $responder);
+
+        if ($offer->user_id === $responder->getKey()) {
+            throw ValidationException::withMessages(['offer' => 'You can\'t answer your own offer.']);
+        }
+
+        if (! $accept) {
+            DB::transaction(function () use ($offer, $deal) {
+                $offer = Offer::whereKey($offer->getKey())->lockForUpdate()->first();
+
+                if (! $offer->isOpen() || Deal::whereKey($deal->getKey())->lockForUpdate()->value('status') !== DealStatus::Open->value) {
+                    throw ValidationException::withMessages(['offer' => 'This offer is no longer open.']);
+                }
+
+                $offer->update(['status' => OfferStatus::Declined, 'responded_at' => now()]);
+            });
+
+            $this->system($deal, ucfirst($deal->roleOf($responder)).' declined the offer of '.money($offer->amount_cents).'.');
+            $this->tell($offer->user, new DealUpdate($deal, 'Your offer of '.money($offer->amount_cents).' was declined', 'You can make another offer in the deal room.', tone: 'danger'));
+
+            return;
+        }
+
+        DB::transaction(function () use ($offer, $deal) {
+            // Lock in a fixed order (listing → deal → offer) and re-check everything once we hold the locks.
+            $listing = Listing::whereKey($deal->listing_id)->lockForUpdate()->first();
+            $deal = Deal::whereKey($deal->getKey())->lockForUpdate()->first();
+            $offer = Offer::whereKey($offer->getKey())->lockForUpdate()->first();
+
+            if (! $offer->isOpen() || $deal->status !== DealStatus::Open) {
+                throw ValidationException::withMessages(['offer' => 'This offer is no longer open.']);
+            }
+
+            if ($listing->status !== ListingStatus::Active || $listing->vehicle->user_id !== $deal->seller_id) {
+                throw ValidationException::withMessages(['offer' => 'This car is no longer available.']);
+            }
+
+            $offer->update(['status' => OfferStatus::Accepted, 'responded_at' => now()]);
+            $deal->update(['status' => DealStatus::Agreed, 'agreed_price_cents' => $offer->amount_cents, 'agreed_at' => now()]);
+            $deal->inspection()->firstOrCreate([]);
+            $listing->update(['status' => ListingStatus::Pending]);
+
+            $this->system($deal, 'Price agreed at '.money($offer->amount_cents).'. Next: inspection and handover.');
+
+            Deal::where('listing_id', $listing->getKey())
+                ->whereKeyNot($deal->getKey())
+                ->where('status', DealStatus::Open)
+                ->get()
+                ->each(fn (Deal $other) => $this->system($other, 'The seller has agreed a sale with another buyer. If it falls through, the car will be back on the market.'));
+        });
+
+        foreach ([$deal->buyer, $deal->seller] as $user) {
+            $this->tell($user, new DealUpdate($deal, "Price agreed: {$deal->vehicle->title()} for ".money($offer->amount_cents), 'Book an inspection and work through the handover checklist together.', tone: 'success'));
+        }
+    }
+
+    public function cancel(Deal $deal, User $user, ?string $reason = null, bool $notify = true): void
+    {
+        $this->ensureParticipant($deal, $user);
+
+        if (! $deal->status->isActive()) {
+            throw ValidationException::withMessages(['cancel' => 'This deal is already closed.']);
+        }
+
+        DB::transaction(function () use ($deal, $user, $reason) {
+            $wasAgreed = $deal->status === DealStatus::Agreed;
+
+            $deal->update([
+                'status' => DealStatus::Cancelled,
+                'cancelled_at' => now(),
+                'cancelled_by' => $user->getKey(),
+                'cancel_reason' => $reason,
+            ]);
+            $deal->offers()->where('status', OfferStatus::Pending)->update(['status' => OfferStatus::Withdrawn]);
+
+            if ($wasAgreed && $deal->listing->status === ListingStatus::Pending) {
+                $deal->listing->update(['status' => ListingStatus::Active]);
+            }
+
+            $this->system($deal, ucfirst($deal->roleOf($user)).' cancelled the deal.');
+            $this->quote($deal, $user, $reason);
+        });
+
+        if (! $notify) {
+            return;
+        }
+
+        // Their words stay in the deal room, where the scam shield can flag them; the email only points there.
+        $this->tell($deal->counterparty($user), new DealUpdate($deal, "{$user->publicName()} cancelled the deal for the {$deal->vehicle->title()}", $reason ? 'Their reason is in the deal room.' : null, tone: 'danger'));
+    }
+
+    public function toggleHandover(Deal $deal, User $user, string $key): void
+    {
+        $this->ensureParticipant($deal, $user);
+        $item = config("passport.handover.{$key}");
+
+        if ($deal->status !== DealStatus::Agreed || ! $item) {
+            throw ValidationException::withMessages(['handover' => 'The handover checklist opens once a price is agreed.']);
+        }
+
+        if ($item['by'] !== $deal->roleOf($user)) {
+            throw ValidationException::withMessages(['handover' => 'Only the '.$item['by'].' can tick this step.']);
+        }
+
+        $state = $deal->handover ?? [];
+        $state[$key] = isset($state[$key]) ? null : now()->toIso8601String();
+
+        // Changing the checklist invalidates any confirmations already given.
+        $deal->update(['handover' => array_filter($state), 'buyer_confirmed_at' => null, 'seller_confirmed_at' => null]);
+    }
+
+    /**
+     * Both sides confirm the sale is done. The second confirmation transfers ownership.
+     */
+    public function confirm(Deal $deal, User $user, ?int $saleMileage = null): bool
+    {
+        $this->ensureParticipant($deal, $user);
+        $role = $deal->roleOf($user);
+
+        $completed = DB::transaction(function () use ($deal, $role, $saleMileage) {
+            // Both people can press "confirm" at the same moment: serialise on the deal row.
+            $deal = Deal::whereKey($deal->getKey())->lockForUpdate()->first();
+            $this->ensureTransferable($deal);
+
+            if (! $deal->handoverComplete()) {
+                throw ValidationException::withMessages(['confirm' => 'Finish every required handover step first.']);
+            }
+
+            $current = $deal->vehicle->current_mileage;
+
+            if ($role === 'seller') {
+                if ($saleMileage === null || $saleMileage < $current || $saleMileage > $current + self::MAX_HANDOVER_MILES) {
+                    throw ValidationException::withMessages([
+                        'sale_mileage' => 'Enter the odometer reading at handover — between '.number_format($current).' and '.number_format($current + self::MAX_HANDOVER_MILES).' mi.',
+                    ]);
+                }
+
+                $deal->update(['sale_mileage' => $saleMileage, 'seller_confirmed_at' => now()]);
+            } else {
+                if ($deal->seller_confirmed_at && $deal->sale_mileage < $current) {
+                    // A newer reading arrived after the seller confirmed: their figure can't be right any more.
+                    $deal->update(['seller_confirmed_at' => null]);
+
+                    return 'stale';
+                }
+
+                $deal->update(['buyer_confirmed_at' => now()]);
+            }
+
+            $this->system($deal, ucfirst($role).' confirmed the handover is complete'.($role === 'seller' ? ' at '.number_format($saleMileage).' mi.' : '.'));
+
+            if ($deal->buyer_confirmed_at && $deal->seller_confirmed_at) {
+                $this->transfer->complete($deal);
+
+                return true;
+            }
+
+            return false;
+        });
+
+        if ($completed === 'stale') {
+            throw ValidationException::withMessages(['confirm' => 'The odometer has moved on since the seller confirmed. They need to enter the handover reading again.']);
+        }
+
+        if ($completed) {
+            return true;
+        }
+
+        $this->tell($deal->counterparty($user), new DealUpdate($deal, "{$user->publicName()} confirmed the handover", 'Confirm on your side to complete the sale and transfer the passport.'));
+
+        return false;
+    }
+
+    /**
+     * Free text attached to an action (offer note, cancel reason) is posted as the user's own message,
+     * so it is scanned and attributed like any other message.
+     */
+    private function quote(Deal $deal, User $author, ?string $text): void
+    {
+        if (blank($text)) {
+            return;
+        }
+
+        $flags = $this->shield->scan($text);
+        $deal->messages()->create(['user_id' => $author->getKey(), 'body' => trim($text), 'risk_flags' => $flags ?: null]);
+    }
+
+    /**
+     * A sale can only complete while it is agreed, the seller still owns the car, and the listing hasn't been removed.
+     */
+    public function ensureTransferable(Deal $deal): void
+    {
+        if ($deal->status !== DealStatus::Agreed) {
+            throw ValidationException::withMessages(['confirm' => 'There is no agreed sale to confirm.']);
+        }
+
+        if ($deal->vehicle->user_id !== $deal->seller_id) {
+            throw ValidationException::withMessages(['confirm' => 'The seller no longer owns this car, so it can\'t be transferred.']);
+        }
+
+        if ($deal->listing->status !== ListingStatus::Pending) {
+            throw ValidationException::withMessages(['confirm' => 'This listing is no longer under offer.']);
+        }
+    }
+
+    /**
+     * Cancel every live deal on a car (except one), telling the buyer and withdrawing their offers.
+     */
+    public function cancelOthers(int $vehicleId, ?int $exceptDealId, string $reason): void
+    {
+        $this->cancelAll(Deal::where('vehicle_id', $vehicleId)->when($exceptDealId, fn ($q) => $q->whereKeyNot($exceptDealId)), $reason);
+    }
+
+    /**
+     * @param  Builder<Deal>  $deals
+     */
+    public function cancelAll($deals, string $reason): void
+    {
+        $deals->whereIn('status', [DealStatus::Open, DealStatus::Agreed])
+            ->get()
+            ->each(function (Deal $other) use ($reason) {
+                $other->update(['status' => DealStatus::Cancelled, 'cancelled_at' => now(), 'cancel_reason' => $reason]);
+                $other->offers()->where('status', OfferStatus::Pending)->update(['status' => OfferStatus::Withdrawn]);
+                $this->system($other, $reason.'.');
+
+                DB::afterCommit(fn () => $this->tell($other->buyer, new DealUpdate($other, "Your deal for the {$other->vehicle->title()} was closed", $reason, tone: 'danger')));
+            });
+    }
+
+    /**
+     * Notify a party to the deal, unless their account has since been deleted.
+     */
+    private function tell(User $user, DealUpdate $update): void
+    {
+        if ($user->exists) {
+            $user->notify($update);
+        }
+    }
+
+    public function system(Deal $deal, string $body): DealMessage
+    {
+        return $deal->messages()->create(['user_id' => null, 'body' => $body]);
+    }
+
+    private function ensureParticipant(Deal $deal, User $user): void
+    {
+        abort_unless($deal->isParticipant($user), 403);
+    }
+}
