@@ -74,6 +74,14 @@ Grades: A ≥ 85, B ≥ 70, C ≥ 50, D below 50.
 - **Production setup.** S3/R2 storage for receipts and photos, SMTP email, PostgreSQL (with a CI job running the whole suite on it).
 - 146 Pest tests, and a recorded sale walkthrough in the README.
 
+## Shipped in v1.2 — pre-launch hardening
+A full audit (security, privacy, deal state, history integrity, production, jobs) and fixes for every confirmed finding:
+- **Security and privacy.** Escaped JSON-LD and email Markdown, trusted hosts, EXIF stripped from uploads, rate-limited verification mail, staff accounts that can actually be revoked, read-only demo admin.
+- **Deals.** Locked, re-checked state transitions; a sale can only move a car its seller still owns; removed listings end their deals; handover mileage bounded and re-checked.
+- **Honest history.** Self-verification through second mailboxes refused; disputes and shop-answered records can't be erased; shops name themselves; reminders derived from records; odometer timeline validation; disputed records earn no coverage.
+- **Running it.** After-commit notifications, a queue worker and scheduler in the image, new migrations instead of edited ones, foreign-key indexes, Postgres-safe input handling, unowned passports on account deletion with a staff claim flow, and a demo seed that is deterministic and atomic.
+- 251 Pest tests, run on SQLite and PostgreSQL in CI.
+
 ## Roadmap
 1. **Receipt OCR.** Upload a photo and the date, mileage, line items and shop are filled in for you.
 2. **Telematics and OBD readings.** Odometer readings from connected-car APIs (Smartcar) or a Bluetooth OBD dongle, tagged as device-sourced.

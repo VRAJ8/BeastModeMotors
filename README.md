@@ -11,7 +11,7 @@
   <img alt="Filament 5" src="https://img.shields.io/badge/Filament-5-FDAE4B">
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white">
   <img alt="PHP 8.3" src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-146_passing-2ea44f">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-251_passing-2ea44f">
 </p>
 
 ![A complete private sale: offer, inspection, handover, and the passport moving to the buyer's garage](docs/screenshots/sale-flow.gif)
@@ -34,12 +34,14 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 ### For owners — the garage
 - **Add a car by VIN.** The check digit is validated (it catches typos and many forged VINs). The car is decoded from NHTSA's vPIC database, falling back to an offline decoder if that's unreachable. Open safety recalls are pulled, and a maintenance plan is created, with a separate schedule for EVs.
 - **Log work with evidence.** Each record has line items, receipts (PDF or photo), who did it and which maintenance items it covered. Every record is also an odometer reading.
-- **Shop verification.** One tap emails the shop a signed link that expires in 14 days. The shop confirms or disputes the record without creating an account. Confirmed records get a stamp and their facts are locked, so the confirmation stays meaningful.
-- **Shop profiles and directory.** A shop gets a public profile once it confirms its first record. The profile shows records confirmed, cars worked on, response rate, typical answer time and a "usually answers within a day" badge. Shops complete their profile through a signed link; owners pick a listed shop instead of typing an email, and never see the shop's address.
-- **Integrity signals.** Odometer readings that go backwards are flagged. Records entered more than 30 days after the work are labelled "logged later". Entering a lower reading needs explicit confirmation.
+- **Shop verification.** One tap emails the shop a signed link that expires in 14 days. The shop confirms or disputes the record without creating an account, and names itself the first time it confirms, so an owner can't invent a shop's name. A record is frozen while the shop is looking at it, and locked once confirmed. Owners can't verify their own work through a second mailbox: plus-aliases, Gmail dots and their own company domain are all refused.
+- **Disputes stay with the car.** A record the shop confirmed or disputed can't be deleted, and a passport carrying a dispute can't be deleted either, so a "that wasn't us" can't be erased by starting over.
+- **Shop profiles and directory.** A shop's public profile shows records confirmed, cars worked on, response rate, typical answer time and a "usually answers within a day" badge. It appears in the directory once owners of two different accounts have had work confirmed (or staff have vetted it). Shops complete their profile through a signed link; owners pick a listed shop instead of typing an email, and never see the shop's address.
+- **Integrity signals.** Odometer readings that go backwards are flagged, and new readings must fit the timeline on both sides of their date. Records entered more than 30 days after the work are labelled "logged later". Maintenance reminders are derived from the records that completed them, so editing or deleting a record rolls them back.
+- **Someone else registered your car?** Anyone can type a VIN, so if a VIN is already taken the real owner can request a review in one click. Staff check the paperwork and then release the VIN or hand the passport over.
 - **The Passport Score (0–100).** It measures how well the history is *evidenced*, not how much was spent. It covers identity, history coverage, quality of evidence, odometer integrity, and upkeep and recalls. The breakdown is always visible, with tips on how to improve it.
 - **Maintenance reminders** by mileage or time, whichever comes first. **Expiry alerts** for registration, insurance and warranties. **Weekly recall checks.** All are sent by email and in-app.
-- **Running costs.** Cost per month and per mile, a 12-month chart, spending by category, and real-world mpg or mi/kWh from fill-ups. Costs are private and never transfer to the next owner.
+- **Running costs.** Cost per month and per mile, a 12-month chart, spending by category, and real-world mpg or mi/kWh from fill-ups (fills logged without an odometer reading still count). Costs are private and never transfer to the next owner.
 - **Share links** with per-link privacy (masked VIN, hidden costs, receipts on or off), view counts, expiry and revocation. Also a **PDF report** and a printable **"For sale" window sign with a QR code**.
 
 ### For buyers and sellers — the marketplace
@@ -60,14 +62,18 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 
 - **No money handling, on purpose.** Fake escrow is one of the most common car-sale scams, so there's nothing for scammers to impersonate.
 
+### Leaving
+Deleting an account never deletes other people's history. A car whose passport has earlier owners, a sale made on the platform or a shop's dispute stays registered with no owner: the person's costs, personal paperwork and share links are deleted, and the history waits for the car's next owner, whom staff can assign once they've seen the paperwork. Cars with only that person's own history are deleted along with their files. Deals keep working for the other party, shown as "Deleted account".
+
 ### For the team — trust & safety console (`/admin`)
 - A dashboard with verification rate, live listings, completed transfers, open reports, and messages recently flagged by the scam shield.
 - **Listings:** remove a listing with a reason (shown to the seller), or restore it.
 - **Reports:** a review queue for listing reports.
 - **Deals:** filter to those with flagged messages.
 - **Shop verifications:** flags a "shop" email on the owner's own domain, a self-verification red flag.
-- **Shops:** hide a shop from the directory or correct its details.
-- **Cars and users.**
+- **Shops:** vet a shop into the directory, hide one, or correct its details.
+- **Cars:** release a VIN someone registered without owning the car, or assign an unowned passport to its proven owner.
+- **Users:** grant or revoke staff access; deleting an account follows the same rules as the user deleting it.
 
 ## Screenshots
 
@@ -117,7 +123,7 @@ Run it locally (below) or deploy it. Every account's password is `password`:
 | Data | NHTSA vPIC (VIN decoding) and Recalls APIs, both free and keyless |
 | Database | SQLite (dev/demo); PostgreSQL in production — CI runs the full suite on both |
 | Storage | Local disks in development; S3 or Cloudflare R2 in production |
-| Testing | Pest 3 with Livewire and Filament test helpers (146 tests) |
+| Testing | Pest 3 with Livewire and Filament test helpers (251 tests) |
 | Delivery | GitHub Actions (Pint, Pest on PHP 8.3 and 8.4 and on PostgreSQL, Docker build), Docker (Nginx + PHP-FPM), Render blueprint |
 
 ## Getting started
@@ -136,11 +142,11 @@ Open http://localhost:8000. Emails (shop verification requests, reminders, deal 
 Useful commands:
 
 ```bash
-php artisan demo:seed --fresh          # rebuild the demo
+php artisan demo:seed --fresh          # rebuild the demo (refuses unless DEMO_MODE=true, or --force)
 php artisan passport:send-reminders    # maintenance & document-expiry emails (daily)
 php artisan passport:sync-recalls      # NHTSA recall check (weekly)
-php artisan passport:housekeeping      # expire stale offers and verification links (hourly)
-php artisan test                       # 146 tests
+php artisan passport:housekeeping      # expire stale offers and verification links, refresh listing scores (hourly)
+php artisan test                       # 251 tests
 vendor/bin/pint --test                 # code style
 ```
 
@@ -179,7 +185,9 @@ The image is a multi-stage build: Vite assets, then `composer install --no-dev`,
 
 - **All deal state changes go through `App\Services\DealFlow`.** That covers start, post, offer, counter, accept, cancel, handover and confirm. The Livewire deal room only calls it, so the rules live in one tested place.
 - **`App\Services\OwnershipTransfer`** completes a sale in one transaction. It closes the old ownership with the handover odometer reading, opens the next one, deletes personal paperwork, revokes share links, and cancels other buyers' deals.
-- **`App\Services\PassportScore`** is pure and explains itself. Each of its five components returns points, a detail line and a tip. Listings store a score snapshot for sorting and refresh it when viewed.
+- **`App\Services\PassportScore`** is pure and explains itself. Each of its five components returns points, a detail line and a tip. Listings store a score snapshot for sorting, refreshed when viewed and hourly by housekeeping.
+- **Email never decides whether something happened.** Every notification is queued to send after the database commits, so a bounced email can't roll back a sale. A verification email that fails frees the request for a resend.
+- **`App\Services\AccountDeletion`** decides, per car, whether a passport is deleted or kept unowned, and is used by both the profile page and the admin.
 - **Evidence is derived, not stored.** `ServiceRecord::evidence()` is computed from verification and dispute timestamps and attached receipts, so it can't drift out of sync.
 - **Every service record is also an odometer reading** (a model hook keeps the two in step). `OdometerAnalyzer` finds readings that go backwards.
 - **Shop verification uses Laravel signed URLs.** There are no tokens to store or leak, links expire, and the responder's name and IP are recorded with the answer.
