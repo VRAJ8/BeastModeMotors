@@ -7,6 +7,7 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PassportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SavedSearchController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopVerificationController;
 use App\Http\Controllers\SitemapController;
@@ -60,6 +61,10 @@ Route::get('/robots.txt', fn () => response("User-agent: *\nDisallow: /admin\nDi
 | Signed-in
 |--------------------------------------------------------------------------
 */
+
+// The signed "stop these emails" link in saved-search alerts. Mail clients POST to it for one-click unsubscribe.
+Route::match(['get', 'post'], '/alerts/unsubscribe/{user}', [SavedSearchController::class, 'unsubscribe'])
+    ->name('saved-searches.unsubscribe')->middleware('signed');
 
 // A transfer link someone was sent for a car they bought outside the marketplace.
 Route::get('/transfer/{token}', [TransferController::class, 'show'])->name('transfers.show')->middleware('throttle:30,1');

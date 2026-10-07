@@ -58,7 +58,9 @@ if (! function_exists('md_plain')) {
      */
     function md_plain(?string $markdown): string
     {
-        $text = preg_replace('/\\\\([\\\\`*_{}\[\]()#+\-.!|<>~])/', '$1', (string) $markdown);
+        // Links first, while escaped brackets still look escaped: [text](url) reads as "text (url)".
+        $text = preg_replace('/(?<!\\\\)\[((?:\\\\.|[^\]\\\\])*)\]\((https?:\/\/[^)\s]+)\)/', '$1 ($2)', (string) $markdown);
+        $text = preg_replace('/\\\\([\\\\`*_{}\[\]()#+\-.!|<>~])/', '$1', $text);
 
         return preg_replace('/\*\*(.+?)\*\*/s', '$1', $text);
     }
