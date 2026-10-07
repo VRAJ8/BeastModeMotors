@@ -30,6 +30,7 @@ use App\Services\OwnershipTransfer;
 use App\Services\ScamShield;
 use App\Services\VinDecoder;
 use App\Support\CarIllustration;
+use App\Support\ListingFilters;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -199,6 +200,12 @@ class DemoSeeder extends Seeder
         $this->people['alex']->notifyNow(new VerificationAnswered($answered), ['database']);
 
         $this->shopProfiles();
+
+        // Sam, the demo buyer, is watching for well-documented cars.
+        foreach ([['min_score' => 70], ['make' => 'Porsche', 'max_price' => 90000]] as $filters) {
+            $criteria = ListingFilters::from($filters);
+            $this->people['sam']->savedSearches()->create(['filters' => $criteria->toArray(), 'filters_hash' => $criteria->hash(), 'notified_through' => now()]);
+        }
 
         foreach (Listing::public()->get() as $listing) {
             $this->publisher->refreshScore($listing);

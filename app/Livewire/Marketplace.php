@@ -5,9 +5,11 @@ namespace App\Livewire;
 use App\Enums\FuelType;
 use App\Enums\ListingStatus;
 use App\Models\Listing;
+use App\Models\SavedSearch;
 use App\Models\Vehicle;
+use App\Support\ListingFilters;
 use App\Support\UsStates;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -57,48 +59,53 @@ class Marketplace extends Component
     }
 
     /**
-     * A whole number from a URL or form value, clamped to what the column can hold. Postgres rejects
-     * out-of-range parameters outright, so a ZIP code typed into "max miles" must never reach it raw.
+     * Keep this search and email the buyer when new cars match it.
      */
-    private static function bounded(string|int $value, int $min, int $max): ?int
+    public function saveSearch()
     {
-        $digits = preg_replace('/[\s,$]/', '', (string) $value);
+        $filters = $this->filters();
 
-        return ctype_digit($digits) ? (int) min(max((int) substr($digits, 0, 12), $min), $max) : null;
+        if (! Auth::check()) {
+            redirect()->setIntendedUrl($filters->url());
+
+            return $this->redirectRoute('login');
+        }
+
+        $user = Auth::user();
+
+        if ($filters->isEmpty() || $user->savedSearches()->where('filters_hash', $filters->hash())->exists()) {
+            return null;
+        }
+
+        if ($user->savedSearches()->count() >= SavedSearch::PER_USER) {
+            $this->addError('saveSearch', 'You can save up to '.SavedSearch::PER_USER.' searches. Delete one on your Saved page first.');
+
+            return null;
+        }
+
+        $user->savedSearches()->create([
+            'filters' => $filters->toArray(),
+            'filters_hash' => $filters->hash(),
+            'notified_through' => now(),
+        ]);
+
+        $this->dispatch('toast', message: 'Search saved. We\'ll email you when new cars match.');
+
+        return null;
     }
 
-    private static function looksLikeYear(string $term): bool
+    private function filters(): ListingFilters
     {
-        return strlen($term) === 4 && ctype_digit($term) && (int) $term >= 1900 && (int) $term <= (int) date('Y') + 2;
+        return ListingFilters::from([
+            'q' => $this->q, 'make' => $this->make, 'max_price' => $this->maxPrice, 'min_year' => $this->minYear,
+            'max_miles' => $this->maxMiles, 'min_score' => $this->minScore, 'state' => $this->state, 'fuel' => $this->fuel,
+        ]);
     }
 
     public function render()
     {
-        $minYear = self::bounded($this->minYear, 1900, 2100);
-        $maxPrice = self::bounded($this->maxPrice, 0, 100_000_000);
-        $maxMiles = self::bounded($this->maxMiles, 0, 2_000_000);
-        $minScore = self::bounded($this->minScore, 0, 100) ?? 0;
-
-        $query = Listing::public()
-            ->with('vehicle.photos')
-            ->whereHas('vehicle', function (Builder $v) use ($minYear) {
-                $v->when($this->make, fn ($q) => $q->where('make', $this->make))
-                    ->when($this->fuel, fn ($q) => $q->where('fuel_type', $this->fuel))
-                    ->when($minYear !== null, fn ($q) => $q->where('year', '>=', $minYear))
-                    ->when(trim($this->q) !== '', function ($q) {
-                        foreach (preg_split('/\s+/', trim($this->q)) as $term) {
-                            // whereLike is case-insensitive on every database (ILIKE on Postgres).
-                            $q->where(fn ($w) => $w->whereLike('make', "%{$term}%")
-                                ->orWhereLike('model', "%{$term}%")
-                                ->orWhereLike('trim', "%{$term}%")
-                                ->when(self::looksLikeYear($term), fn ($y) => $y->orWhere('year', (int) $term)));
-                        }
-                    });
-            })
-            ->when($maxPrice !== null, fn ($q) => $q->where('price_cents', '<=', $maxPrice * 100))
-            ->when($maxMiles !== null, fn ($q) => $q->where('mileage', '<=', $maxMiles))
-            ->when($minScore > 0, fn ($q) => $q->where('score', '>=', $minScore))
-            ->when($this->state, fn ($q) => $q->where('state', $this->state));
+        $filters = $this->filters();
+        $query = $filters->apply(Listing::public()->with('vehicle.photos'));
 
         match ($this->sort) {
             'newest' => $query->latest('published_at'),
@@ -113,10 +120,14 @@ class Marketplace extends Component
 
         return view('livewire.marketplace', [
             'listings' => $query->paginate(12),
-            'makes' => Vehicle::whereHas('listings', fn ($q) => $q->whereIn('status', [ListingStatus::Active, ListingStatus::Pending]))->distinct()->orderBy('make')->pluck('make'),
+            // Keep the chosen make in the list even with nothing for sale, as when a saved search is reopened.
+            'makes' => Vehicle::whereHas('listings', fn ($q) => $q->whereIn('status', [ListingStatus::Active, ListingStatus::Pending]))->distinct()->pluck('make')
+                ->push($filters->make)->filter()->unique()->sort()->values(),
             'states' => UsStates::ALL,
             'fuels' => FuelType::options(),
             'filtered' => $this->q || $this->make || $this->maxPrice || $this->minYear || $this->maxMiles || $this->minScore || $this->state || $this->fuel,
+            'searchable' => ! $filters->isEmpty(),
+            'searchSaved' => Auth::check() && Auth::user()->savedSearches()->where('filters_hash', $filters->hash())->exists(),
         ]);
     }
 }

@@ -85,6 +85,14 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * @return HasMany<SavedSearch, $this>
+     */
+    public function savedSearches(): HasMany
+    {
+        return $this->hasMany(SavedSearch::class)->latest('id');
+    }
+
+    /**
      * @return HasMany<Deal, $this>
      */
     public function purchases(): HasMany

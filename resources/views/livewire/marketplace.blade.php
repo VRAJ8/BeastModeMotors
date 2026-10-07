@@ -74,6 +74,16 @@
             </div>
         </div>
 
+        @if ($searchable)
+            @if ($searchSaved)
+                <p class="flex items-center justify-center gap-1.5 rounded-xl bg-verified-soft p-2.5 text-sm text-verified"><x-heroicon-m-bell-alert class="size-4" /> Saved. <a href="{{ route('saved') }}" class="underline">Manage</a></p>
+            @else
+                <button wire:click="saveSearch" class="btn-secondary w-full"><x-heroicon-m-bell class="size-4" /> Save this search</button>
+                <p class="-mt-3 text-center text-xs text-muted">Get an email when a new car matches.</p>
+            @endif
+            @error('saveSearch') <p class="error">{{ $message }}</p> @enderror
+        @endif
+
         @if ($filtered)
             <button wire:click="clear" class="btn-ghost w-full">Clear filters</button>
         @endif

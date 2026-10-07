@@ -47,6 +47,7 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 
 ### For buyers and sellers — the marketplace
 - **Every listing is backed by its passport.** Search and sort by Passport Score, filter by make, price, year, mileage, powertrain and state.
+- **Saved searches with daily alerts.** Save any filtered search and get one email a day listing new cars that match, with one-click unsubscribe (RFC 8058). Manage searches and switch emails on or off from the Saved page.
 - **Deal room** for each buyer and seller pair:
   - Messages and offers, with counter-offers and 72-hour expiry.
   - A **pre-purchase inspection checklist** (18 points) for the buyer or their mechanic.
