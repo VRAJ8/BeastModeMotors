@@ -17,7 +17,11 @@
         </h3>
         <p class="truncate text-sm text-muted">{{ $vehicle->trim ?: $vehicle->body }}</p>
         <div class="mt-auto flex items-end justify-between pt-4">
-            <p class="num text-xl font-semibold">{{ money($listing->price_cents) }}</p>
+            <p class="num text-xl font-semibold">{{ money($listing->price_cents) }}
+                @if ($was = $listing->recentDropFrom())
+                    <span class="ml-1 text-xs font-normal text-muted line-through">{{ money($was) }}</span>
+                @endif
+            </p>
             <p class="text-right text-xs text-muted"><span class="num">{{ miles($listing->mileage) }}</span><br>{{ $listing->location() }}</p>
         </div>
     </div>

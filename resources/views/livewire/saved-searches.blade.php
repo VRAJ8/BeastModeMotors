@@ -1,4 +1,8 @@
 <section>
+    <label class="mb-6 flex cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface p-3 text-sm">
+        <input type="checkbox" @checked($priceDrops) wire:click="togglePriceDrops">
+        <span><span class="font-medium">Email me when a car I saved drops its price</span> <span class="text-muted">· checked once a day, with new search matches</span></span>
+    </label>
     <h2 class="panel-title">Saved searches</h2>
     @if ($searches->isEmpty())
         <p class="mt-2 text-sm text-muted">Filter the <a href="{{ route('marketplace') }}" class="underline">marketplace</a> and tap <em>Save this search</em> to get a daily email when a new car matches.</p>

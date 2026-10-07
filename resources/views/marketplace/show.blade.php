@@ -63,6 +63,9 @@
                     <div class="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-4 lg:hidden">
                         <div>
                             <p class="num text-2xl font-semibold">{{ money($listing->price_cents) }}</p>
+                            @if ($was = $listing->recentDropFrom())
+                                <p class="text-xs text-verified">Price dropped from <span class="num line-through">{{ money($was) }}</span> on {{ $listing->price_dropped_at->format('M j') }}</p>
+                            @endif
                             <p class="text-xs text-muted">{{ $listing->location() }} · Passport {{ $score['total'] }}/100</p>
                         </div>
                         <a href="#contact" class="btn-accent">{{ $isSeller ? 'Manage' : 'Contact seller' }}</a>
@@ -105,6 +108,9 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="num text-3xl font-semibold">{{ money($listing->price_cents) }}</p>
+                            @if ($was = $listing->recentDropFrom())
+                                <p class="text-xs text-verified">Price dropped from <span class="num line-through">{{ money($was) }}</span> on {{ $listing->price_dropped_at->format('M j') }}</p>
+                            @endif
                             <p class="mt-1 flex items-center gap-1 text-sm text-muted"><x-heroicon-m-map-pin class="size-4" /> {{ $listing->location() }}</p>
                         </div>
                         @if ($listing->status === \App\Enums\ListingStatus::Pending)

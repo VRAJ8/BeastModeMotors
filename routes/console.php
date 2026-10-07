@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schedule;
 
 // onOneServer: with several containers running the scheduler, each job still runs once (cache lock).
 Schedule::command('passport:send-reminders')->dailyAt('08:00')->withoutOverlapping()->onOneServer();
-Schedule::command('passport:search-alerts')->dailyAt('07:30')->withoutOverlapping()->onOneServer();
+Schedule::command('passport:buyer-alerts')->dailyAt('07:30')->withoutOverlapping()->onOneServer();
 Schedule::command('passport:sync-recalls')->weeklyOn(1, '06:00')->withoutOverlapping()->onOneServer();
 Schedule::command('passport:housekeeping')->hourly()->withoutOverlapping()->onOneServer();
 Schedule::command('queue:prune-failed --hours=168')->daily()->onOneServer();

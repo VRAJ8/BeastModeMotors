@@ -5,7 +5,7 @@ use App\Livewire\Marketplace;
 use App\Livewire\SavedSearches;
 use App\Models\SavedSearch;
 use App\Models\User;
-use App\Notifications\SavedSearchMatches;
+use App\Notifications\BuyerAlerts;
 use App\Support\ListingFilters;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Notification;
@@ -73,23 +73,23 @@ it('emails each buyer once a day with the new cars matching their searches', fun
     $own->vehicle->update(['user_id' => $buyer->id]);
     $own->update(['seller_id' => $buyer->id]);
 
-    $this->artisan('passport:search-alerts')->assertSuccessful();
+    $this->artisan('passport:buyer-alerts')->assertSuccessful();
 
-    Notification::assertSentToTimes($buyer, SavedSearchMatches::class, 1);
-    Notification::assertSentTo($buyer, SavedSearchMatches::class, function (SavedSearchMatches $n) use ($match) {
+    Notification::assertSentToTimes($buyer, BuyerAlerts::class, 1);
+    Notification::assertSentTo($buyer, BuyerAlerts::class, function (BuyerAlerts $n) use ($match) {
         $mail = $n->toMail($n)->render()->toHtml();
 
         return $n->cars === 1 && count($n->searches) === 2
             && str_contains($mail, e($match->vehicle->fullTitle()))
             && str_contains($n->unsubscribeUrl, 'signature=');
     });
-    Notification::assertNotSentTo($quiet->user, SavedSearchMatches::class);
+    Notification::assertNotSentTo($quiet->user, BuyerAlerts::class);
     expect($search->fresh()->notified_through->isToday())->toBeTrue()
         ->and($quiet->fresh()->notified_through->isToday())->toBeTrue();
 
     // Nothing new the next day: no email.
     Notification::fake();
-    $this->artisan('passport:search-alerts')->assertSuccessful();
+    $this->artisan('passport:buyer-alerts')->assertSuccessful();
     Notification::assertNothingSent();
 });
 
@@ -105,8 +105,8 @@ it('skips searches with email turned off, and lets the buyer manage them', funct
         ->call('toggleAlerts', $search->id);
 
     expect($search->fresh()->email_alerts)->toBeFalse();
-    $this->artisan('passport:search-alerts');
-    Notification::assertNotSentTo($buyer, SavedSearchMatches::class);
+    $this->artisan('passport:buyer-alerts');
+    Notification::assertNotSentTo($buyer, BuyerAlerts::class);
 
     Livewire::actingAs($buyer)->test(SavedSearches::class)->call('delete', $other->id)->assertNotFound();
     Livewire::actingAs($buyer)->test(SavedSearches::class)->call('delete', $search->id);
