@@ -11,7 +11,7 @@
   <img alt="Filament 5" src="https://img.shields.io/badge/Filament-5-FDAE4B">
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white">
   <img alt="PHP 8.3" src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-251_passing-2ea44f">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-270_passing-2ea44f">
 </p>
 
 ![A complete private sale: offer, inspection, handover, and the passport moving to the buyer's garage](docs/screenshots/sale-flow.gif)
@@ -34,6 +34,7 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
 ### For owners — the garage
 - **Add a car by VIN.** The check digit is validated (it catches typos and many forged VINs). The car is decoded from NHTSA's vPIC database, falling back to an offline decoder if that's unreachable. Open safety recalls are pulled, and a maintenance plan is created, with a separate schedule for EVs.
 - **Log work with evidence.** Each record has line items, receipts (PDF or photo), who did it and which maintenance items it covered. Every record is also an odometer reading.
+- **Fill it in from the receipt.** Upload a photo or PDF of the invoice and Claude reads it: the date, odometer, shop, line items and total, and which of the car's maintenance items the work covered. The owner checks everything before saving, a receipt that names a different VIN is flagged, and a reading below the car's history still needs confirming. Off unless `ANTHROPIC_API_KEY` is set.
 - **Shop verification.** One tap emails the shop a signed link that expires in 14 days. The shop confirms or disputes the record without creating an account, and names itself the first time it confirms, so an owner can't invent a shop's name. A record is frozen while the shop is looking at it, and locked once confirmed. Owners can't verify their own work through a second mailbox: plus-aliases, Gmail dots and their own company domain are all refused.
 - **Disputes stay with the car.** A record the shop confirmed or disputed can't be deleted, and a passport carrying a dispute can't be deleted either, so a "that wasn't us" can't be erased by starting over.
 - **Shop profiles and directory.** A shop's public profile shows records confirmed, cars worked on, response rate, typical answer time and a "usually answers within a day" badge. It appears in the directory once owners of two different accounts have had work confirmed (or staff have vetted it). Shops complete their profile through a signed link; owners pick a listed shop instead of typing an email, and never see the shop's address.
@@ -120,10 +121,11 @@ Run it locally (below) or deploy it. Every account's password is `password`:
 | Back-office | Filament 5 |
 | Styling | Tailwind CSS 4 with design tokens; self-hosted Bricolage Grotesque, Inter and JetBrains Mono |
 | Documents | DomPDF (passport report, bill of sale), BaconQrCode (window sign) |
+| Receipt reading | Claude API via the official PHP SDK (`anthropic-ai/sdk`), structured JSON output |
 | Data | NHTSA vPIC (VIN decoding) and Recalls APIs, both free and keyless |
 | Database | SQLite (dev/demo); PostgreSQL in production — CI runs the full suite on both |
 | Storage | Local disks in development; S3 or Cloudflare R2 in production |
-| Testing | Pest 3 with Livewire and Filament test helpers (251 tests) |
+| Testing | Pest 3 with Livewire and Filament test helpers (270 tests) |
 | Delivery | GitHub Actions (Pint, Pest on PHP 8.3 and 8.4 and on PostgreSQL, Docker build), Docker (Nginx + PHP-FPM), Render blueprint |
 
 ## Getting started
@@ -146,7 +148,7 @@ php artisan demo:seed --fresh          # rebuild the demo (refuses unless DEMO_M
 php artisan passport:send-reminders    # maintenance & document-expiry emails (daily)
 php artisan passport:sync-recalls      # NHTSA recall check (weekly)
 php artisan passport:housekeeping      # expire stale offers and verification links, refresh listing scores (hourly)
-php artisan test                       # 251 tests
+php artisan test                       # 270 tests
 vendor/bin/pint --test                 # code style
 ```
 
@@ -169,6 +171,7 @@ Everything is configured through environment variables (see [`.env.example`](.en
 | Real email (shop verification needs it) | Any SMTP provider, e.g. Resend: `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.resend.com`, `MAIL_PORT=465`, `MAIL_SCHEME=smtps`, `MAIL_USERNAME=resend`, `MAIL_PASSWORD=<api key>` |
 | Emails, reminders, recall checks, expiry | Built in: the image runs a queue worker and the scheduler (`QUEUE_CONNECTION=database`). Running several web containers? Keep `RUN_SCHEDULER=true` on all of them (jobs take a lock) or on just one |
 | Custom domain | Keep `APP_URL` on the main domain and list other hostnames in `TRUSTED_HOSTS` |
+| Receipt scanning (optional) | `ANTHROPIC_API_KEY`. Uses `claude-opus-5-5` at low effort (`RECEIPT_SCANNER_MODEL`, `RECEIPT_SCANNER_EFFORT`), capped at `RECEIPT_SCANS_PER_DAY` per person |
 | Turn off the demo | `DEMO_MODE=false` and `DEMO_NIGHTLY_RESET=false` |
 
 ### Any Docker host

@@ -23,6 +23,15 @@ return [
 
     'demo' => (bool) env('DEMO_MODE', false),
 
+    // Reading receipts with Claude to pre-fill a service record. On when an Anthropic API key is configured.
+    'receipts' => [
+        'scanner' => (bool) env('RECEIPT_SCANNER', filled(env('ANTHROPIC_API_KEY'))),
+        'model' => env('RECEIPT_SCANNER_MODEL', 'claude-opus-5-5'),
+        // Reading an invoice is extraction, not deep reasoning: low effort keeps it quick and cheap.
+        'effort' => env('RECEIPT_SCANNER_EFFORT', 'low'),
+        'scans_per_day' => (int) env('RECEIPT_SCANS_PER_DAY', 30),
+    ],
+
     // Rebuild the demo (database and uploads) every night at 04:00. Only for a public demo deploy.
     'demo_nightly_reset' => (bool) env('DEMO_NIGHTLY_RESET', false),
 

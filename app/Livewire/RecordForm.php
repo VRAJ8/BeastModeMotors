@@ -11,9 +11,11 @@ use App\Models\ServiceRecord;
 use App\Models\Shop;
 use App\Models\Vehicle;
 use App\Services\MaintenancePlanner;
+use App\Services\ReceiptReader;
 use App\Services\ShopVerifier;
 use App\Support\ImageMetadata;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
@@ -62,6 +64,13 @@ class RecordForm extends Component
     public bool $requestVerification = true;
 
     public bool $confirmLowerMileage = false;
+
+    /** Set after a receipt fills the form in, until the owner saves: a reminder to check what it read. */
+    #[Locked]
+    public ?string $scanNote = null;
+
+    #[Locked]
+    public ?string $scanWarning = null;
 
     public function mount(Vehicle $vehicle, ?ServiceRecord $record = null): void
     {
@@ -117,6 +126,72 @@ class RecordForm extends Component
     private function frozen(): bool
     {
         return $this->record !== null && ($this->record->isLocked() || $this->record->pendingVerification()->exists());
+    }
+
+    /**
+     * Fill the form in from an uploaded receipt. Nothing is saved: the owner checks each field and saves.
+     */
+    public function scanReceipt(int $index, ReceiptReader $reader): void
+    {
+        $file = $this->receipts[$index] ?? null;
+
+        if (! $file instanceof TemporaryUploadedFile || $this->frozen() || ! ReceiptReader::enabled()) {
+            return;
+        }
+
+        if (! ReceiptReader::canRead($file->getMimeType(), $file->getSize())) {
+            $this->addError('receipts', 'This file can\'t be read automatically: photos (JPG, PNG, WebP) up to 5 MB and PDFs work. You can still attach it and fill the form in yourself.');
+
+            return;
+        }
+
+        $key = 'receipt-scan:'.Auth::id();
+
+        if (RateLimiter::tooManyAttempts($key, config('passport.receipts.scans_per_day'))) {
+            $this->addError('receipts', 'You\'ve read a lot of receipts today. Fill this one in by hand, or try again tomorrow.');
+
+            return;
+        }
+
+        RateLimiter::hit($key, 86400);
+        $scan = $reader->read($file->get(), $file->getMimeType(), $this->vehicle);
+
+        if ($scan === null) {
+            $this->addError('receipts', 'We couldn\'t read this receipt. It\'s still attached; fill the form in from it yourself.');
+
+            return;
+        }
+
+        $this->resetErrorBag();
+        $this->category = $scan['category'];
+        $this->provider_type = $scan['provider_type'];
+        $this->title = $scan['title'] ?: $this->title;
+        $this->performed_on = $scan['performed_on'] ?? $this->performed_on;
+        $this->mileage = $scan['mileage'] ?? $this->mileage;
+
+        $this->shopId = null;
+        $this->provider_name = '';
+        $this->provider_email = '';
+
+        if ($scan['provider_type'] !== ProviderType::Diy->value) {
+            // A shop already in the directory is picked by its email, which the owner then never sees.
+            $this->provider_email = $this->adoptKnownShop($scan['shop_email']);
+            $this->provider_name = $this->pickedShop->name ?? $scan['shop_name'];
+        }
+
+        $this->items = array_map(fn (array $item) => [
+            'description' => $item['description'],
+            'kind' => $item['kind'],
+            'amount' => number_format($item['amount'], 2, '.', ''),
+        ], $scan['line_items']);
+        $this->cost = $this->items === [] && $scan['total'] !== null ? number_format($scan['total'], 2, '.', '') : '';
+
+        $this->reminderIds = array_values($this->vehicle->reminders->whereIn('task', $scan['tasks'])->modelKeys());
+
+        $this->scanNote = 'Filled in from '.$file->getClientOriginalName().'. Check each field against the receipt before saving.';
+        $this->scanWarning = $scan['vin_mismatch']
+            ? "The receipt shows VIN {$scan['vin']}, which isn't this car's ({$this->vehicle->vin}). Make sure it's the right receipt."
+            : null;
     }
 
     public function addItem(): void
@@ -293,6 +368,7 @@ class RecordForm extends Component
             'providers' => ProviderType::options(),
             'reminders' => $this->vehicle->reminders,
             'locked' => $this->frozen(),
+            'scanner' => ReceiptReader::enabled() && ! $this->frozen(),
             'pending' => $this->record?->pendingVerification,
         ]);
     }
