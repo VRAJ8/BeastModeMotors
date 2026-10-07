@@ -12,12 +12,15 @@ use App\Models\ServiceRecord;
 use App\Models\Shop;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Notifications\DealEnded;
 use App\Notifications\DealUpdate;
 use App\Notifications\RecallsFound;
+use App\Notifications\VerificationAnswered;
 use App\Services\AccountDeletion;
 use App\Services\DealFlow;
 use App\Services\RecallSync;
 use App\Services\ShopVerifier;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Middleware\TrustHosts;
 use Illuminate\Support\Facades\DB;
@@ -147,7 +150,7 @@ it('treats the first successful recall check as a baseline, not news', function 
 
 // --- What a sale resets -------------------------------------------------------------------------------------------
 
-it('closes the seller\'s open verification requests and re-arms expiry alerts for the buyer', function () {
+it('lets the shop still answer after a sale, telling the new owner, and re-arms expiry alerts for the buyer', function () {
     Notification::fake();
     $deal = readyToHandOver();
     $vehicle = $deal->vehicle;
@@ -162,8 +165,36 @@ it('closes the seller\'s open verification requests and re-arms expiry alerts fo
     app(DealFlow::class)->confirm($deal, $deal->seller, $vehicle->current_mileage + 10);
     app(DealFlow::class)->confirm($deal->fresh(), $deal->buyer);
 
-    expect($verification->fresh()->status)->toBe(VerificationStatus::Cancelled)
+    expect($verification->fresh()->isAnswerable())->toBeTrue()
         ->and($warranty->fresh()->expiry_notified_at)->toBeNull();
+
+    // The shop confirms after the sale: the record is verified, and it's the buyer who hears about it.
+    app(ShopVerifier::class)->answer($verification->fresh(), true, 'Dee', null, '127.0.0.1');
+
+    expect($record->fresh()->evidence())->toBe(ServiceRecord::EVIDENCE_VERIFIED);
+    Notification::assertSentTo($deal->buyer, VerificationAnswered::class);
+    Notification::assertNotSentTo($deal->seller, VerificationAnswered::class);
+});
+
+it('tells a buyer their conversation ended when the seller deletes their account and car', function () {
+    Notification::fake();
+    $deal = deal();
+    $title = $deal->vehicle->title();
+
+    app(AccountDeletion::class)->delete($deal->seller);
+
+    expect(Deal::find($deal->id))->toBeNull();
+    Notification::assertSentTo($deal->buyer, DealEnded::class, fn (DealEnded $n) => str_contains($n->body, $title));
+    Notification::assertNotSentTo($deal->buyer, DealUpdate::class);
+});
+
+it('leaves the demo buyer\'s inbox empty of the back-dated sale', function () {
+    config(['passport.demo' => true]);
+    $this->seed(DemoSeeder::class);
+
+    $buyer = User::firstWhere('email', 'buyer@beastmodemotors.test');
+
+    expect($buyer->notifications()->where('data', 'like', '%is yours%')->count())->toBe(0);
 });
 
 // --- What goes into notifications ---------------------------------------------------------------------------------

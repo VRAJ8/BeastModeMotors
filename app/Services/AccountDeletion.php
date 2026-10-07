@@ -5,13 +5,12 @@ namespace App\Services;
 use App\Enums\DealStatus;
 use App\Enums\DocumentType;
 use App\Enums\ListingStatus;
-use App\Enums\VerificationStatus;
 use App\Models\Deal;
 use App\Models\Document;
 use App\Models\Expense;
-use App\Models\ShopVerification;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Notifications\DealEnded;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -42,8 +41,22 @@ class AccountDeletion
         $this->ensureDeletable($user);
 
         // Tell everyone mid-conversation, rather than letting their deals silently disappear.
-        Deal::involving($user)->where('status', DealStatus::Open)->get()
-            ->each(fn (Deal $deal) => $this->deals->cancel($deal, $user, 'Account deleted'));
+        foreach (Deal::involving($user)->where('status', DealStatus::Open)->with('vehicle')->get() as $deal) {
+            // The seller's own car (and so this deal) is about to be deleted: a notice that links to the deal
+            // would fail to send, so the other person gets a plain one instead.
+            $goesWithCar = $deal->vehicle->user_id === $user->getKey() && ! self::hasSharedHistory($deal->vehicle);
+
+            $this->deals->cancel($deal, $user, 'Account deleted', notify: ! $goesWithCar);
+
+            $other = $deal->counterparty($user);
+
+            if ($goesWithCar && $other->exists) {
+                $other->notify(new DealEnded(
+                    "{$user->publicName()} closed their account",
+                    "The {$deal->vehicle->title()} is no longer for sale, so your conversation about it has ended.",
+                ));
+            }
+        }
 
         DB::transaction(function () use ($user) {
             foreach ($user->vehicles()->get() as $vehicle) {
@@ -83,9 +96,6 @@ class AccountDeletion
             ->each->delete();
 
         $vehicle->shareLinks()->whereNull('revoked_at')->update(['revoked_at' => now()]);
-        ShopVerification::whereIn('service_record_id', $vehicle->records()->select('id'))
-            ->where('status', VerificationStatus::Pending)
-            ->update(['status' => VerificationStatus::Cancelled]);
         $vehicle->listings()
             ->whereIn('status', [ListingStatus::Draft, ListingStatus::Active, ListingStatus::Pending])
             ->update(['status' => ListingStatus::Withdrawn]);

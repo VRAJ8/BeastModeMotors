@@ -681,8 +681,12 @@ class DemoSeeder extends Seeder
         $deal->messages()->whereNull('user_id')->update(['created_at' => $soldOn]);
         $listing->update(['sold_at' => $soldOn]);
 
-        $sam->notifications()->delete();
-        $chris->notifications()->delete();
+        // Notifications are sent after the seed commits; clear these inboxes at this point in that same queue,
+        // so everything up to and including the sale is gone and anything seeded later stays.
+        DB::afterCommit(function () use ($sam, $chris) {
+            $sam->notifications()->delete();
+            $chris->notifications()->delete();
+        });
 
         // Sam has driven it since and logged a service.
         $now = Ownership::where('vehicle_id', $miata->id)->where('owner_number', 2)->first();

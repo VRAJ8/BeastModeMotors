@@ -6,9 +6,12 @@ use App\Livewire\Vehicle\History;
 use App\Livewire\Vehicle\Sell;
 use App\Livewire\Vehicle\Settings;
 use App\Models\ServiceRecord;
+use App\Models\Shop;
 use App\Models\Vehicle;
+use App\Services\ShopVerifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -83,4 +86,24 @@ it('accepts the VIN confirmation in any case', function () {
         ->assertHasNoErrors();
 
     expect(Vehicle::find($vehicle->id))->toBeNull();
+});
+
+it('shows the verifier\'s refusal when the shop was picked from the directory too', function () {
+    $shop = Shop::forEmail('desk@eastside.test', 'Eastside');
+    $shop->update(['vetted_at' => now()]);
+    $confirmedFor = ServiceRecord::factory()->create(['vehicle_id' => car()->id]);
+    $v = app(ShopVerifier::class)->request($confirmedFor, $confirmedFor->vehicle->owner, 'Eastside', 'desk@eastside.test');
+    app(ShopVerifier::class)->answer($v, true, 'Dee', null, '127.0.0.1');
+
+    $record = ServiceRecord::factory()->create(['vehicle_id' => $this->vehicle->id, 'provider_email' => 'desk@eastside.test']);
+    foreach (range(1, 5) as $i) {
+        RateLimiter::hit('verify-shop:desk@eastside.test', 86400);
+    }
+
+    Livewire::actingAs($this->owner)->test(History::class, ['vehicle' => $this->vehicle])
+        ->call('startVerification', $record->id)
+        ->assertSet('shopId', $shop->id)
+        ->call('sendVerification')
+        ->assertHasErrors('shopEmail')
+        ->assertSee('Too many verification requests today');
 });

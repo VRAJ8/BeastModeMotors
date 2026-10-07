@@ -121,9 +121,9 @@
                         <div>
                             <label class="label" for="shopEmail">Shop email</label>
                             <input id="shopEmail" type="email" wire:model="shopEmail" class="input" placeholder="service@shop.com">
-                            @error('shopEmail') <p class="error">{{ $message }}</p> @enderror
                         </div>
                     @endif
+                    @error('shopEmail') <p class="error">{{ $message }}</p> @enderror
                 </div>
                 <div class="mt-6 flex justify-end gap-2">
                     <button type="button" wire:click="$set('verifyingId', null)" class="btn-ghost">Cancel</button>

@@ -7,10 +7,8 @@ use App\Enums\DealStatus;
 use App\Enums\DocumentType;
 use App\Enums\ListingStatus;
 use App\Enums\OdometerSource;
-use App\Enums\VerificationStatus;
 use App\Models\Deal;
 use App\Models\Document;
-use App\Models\ShopVerification;
 use App\Notifications\DealUpdate;
 use Illuminate\Support\Facades\DB;
 
@@ -58,10 +56,8 @@ class OwnershipTransfer
 
             $vehicle->shareLinks()->whereNull('revoked_at')->update(['revoked_at' => now()]);
 
-            // The seller can't act on a shop's answer any more, so close their open requests; the buyer can ask again.
-            ShopVerification::whereIn('service_record_id', $vehicle->records()->select('id'))
-                ->where('status', VerificationStatus::Pending)
-                ->update(['status' => VerificationStatus::Cancelled]);
+            // Open verification requests stay open: the shop can still confirm the work, and its answer goes to the
+            // car's owner at that time (ShopVerifier::answer).
 
             // Alerts already sent to the seller (a warranty or inspection running out) are news to the buyer.
             $vehicle->reminders()->update(['notified_at' => null]);

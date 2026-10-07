@@ -188,7 +188,7 @@ class DealFlow
         }
     }
 
-    public function cancel(Deal $deal, User $user, ?string $reason = null): void
+    public function cancel(Deal $deal, User $user, ?string $reason = null, bool $notify = true): void
     {
         $this->ensureParticipant($deal, $user);
 
@@ -214,6 +214,10 @@ class DealFlow
             $this->system($deal, ucfirst($deal->roleOf($user)).' cancelled the deal.');
             $this->quote($deal, $user, $reason);
         });
+
+        if (! $notify) {
+            return;
+        }
 
         // Their words stay in the deal room, where the scam shield can flag them; the email only points there.
         $this->tell($deal->counterparty($user), new DealUpdate($deal, "{$user->publicName()} cancelled the deal for the {$deal->vehicle->title()}", $reason ? 'Their reason is in the deal room.' : null, tone: 'danger'));

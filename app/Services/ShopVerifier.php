@@ -141,6 +141,7 @@ class ShopVerifier
             }
         });
 
-        $verification->requester?->notify(new VerificationAnswered($verification));
+        // Tell whoever holds the passport now: the car may have been sold since the request went out.
+        $verification->record->vehicle->fresh()->owner?->notify(new VerificationAnswered($verification));
     }
 }
