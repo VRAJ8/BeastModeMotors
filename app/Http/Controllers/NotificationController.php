@@ -11,7 +11,7 @@ class NotificationController extends Controller
     public function index(Request $request): View
     {
         return view('notifications.index', [
-            'notifications' => $request->user()->notifications()->paginate(20),
+            'notifications' => $request->user()->notifications()->orderByDesc('id')->paginate(20), // id breaks same-second ties between pages
         ]);
     }
 

@@ -63,6 +63,11 @@ class AccountDeletion
                 self::hasSharedHistory($vehicle) ? $this->release($vehicle) : $vehicle->delete();
             }
 
+            // Not linked by foreign keys, so nothing cascades to them: inbox, other devices' sessions, reset tokens.
+            $user->notifications()->delete();
+            DB::table('sessions')->where('user_id', $user->getKey())->delete();
+            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
             $user->delete();
         });
     }

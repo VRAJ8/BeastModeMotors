@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class VehiclePhoto extends Model
@@ -31,9 +32,10 @@ class VehiclePhoto extends Model
 
     protected static function booted(): void
     {
+        // The file goes once the delete has committed: a rolled-back transaction must not leave a row without its file.
         static::deleted(function (VehiclePhoto $photo) {
             if (! str_starts_with($photo->path, 'http')) {
-                static::disk()->delete($photo->path);
+                DB::afterCommit(fn () => static::disk()->delete($photo->path));
             }
         });
     }

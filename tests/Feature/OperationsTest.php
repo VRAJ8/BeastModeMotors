@@ -378,3 +378,16 @@ it('refuses to wipe a database that is not a demo', function () {
 
     expect(User::find($user->id))->not->toBeNull();
 });
+
+it('leaves nothing personal behind that foreign keys would not catch', function () {
+    $user = User::factory()->create(['email' => 'leaving@example.com']);
+    $user->notify(new DealEnded('A title', 'A body'));
+    DB::table('sessions')->insert(['id' => 'other-device', 'user_id' => $user->id, 'ip_address' => '203.0.113.9', 'user_agent' => 'Phone', 'payload' => '', 'last_activity' => now()->timestamp]);
+    DB::table('password_reset_tokens')->insert(['email' => 'leaving@example.com', 'token' => 'x', 'created_at' => now()]);
+
+    app(AccountDeletion::class)->delete($user);
+
+    expect(DB::table('notifications')->where('notifiable_id', $user->id)->count())->toBe(0)
+        ->and(DB::table('sessions')->where('id', 'other-device')->exists())->toBeFalse()
+        ->and(DB::table('password_reset_tokens')->where('email', 'leaving@example.com')->exists())->toBeFalse();
+});

@@ -7,6 +7,7 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Number;
 
@@ -85,6 +86,7 @@ class Document extends Model
 
     protected static function booted(): void
     {
-        static::deleted(fn (Document $document) => static::disk()->delete($document->path));
+        // The file goes once the delete has committed: a rolled-back transaction must not leave a row without its file.
+        static::deleted(fn (Document $document) => DB::afterCommit(fn () => static::disk()->delete($document->path)));
     }
 }
