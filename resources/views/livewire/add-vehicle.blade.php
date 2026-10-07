@@ -23,6 +23,7 @@
                 </div>
             @elseif ($contested)
                 <div class="mt-4 rounded-xl border border-line bg-paper p-4 text-sm text-ink-soft">
+                    <p class="mb-2"><strong class="text-ink">Bought it from them?</strong> Ask them to send you a transfer link: it's under <em>Sell → Sold it somewhere else?</em> in their garage. The car's whole history then moves to you.</p>
                     <p><strong class="text-ink">Is this your car, and you didn't buy it from that owner?</strong> Anyone can type a VIN, so if someone registered your car by mistake (or on purpose), we'll check the paperwork and move the passport to you.</p>
                     <button type="button" wire:click="requestReview" class="btn-secondary btn-sm mt-3">It's my car — request a review</button>
                 </div>

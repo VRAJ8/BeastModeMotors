@@ -91,7 +91,11 @@ it('generates the disclosure statement for the deal\'s parties only, when the ca
     $this->actingAs($deal->seller)->get($url)->assertOk();
     $this->actingAs(User::factory()->create())->get($url)->assertForbidden();
 
-    $html = view('pdf.odometer-disclosure', ['deal' => $deal->fresh()->load('vehicle', 'buyer', 'seller')])->render();
+    $fresh = $deal->fresh();
+    $html = view('pdf.odometer-disclosure', [
+        'reference' => 'BMM-1', 'vehicle' => $fresh->vehicle, 'mileage' => $fresh->sale_mileage, 'status' => $fresh->odometer_status,
+        'date' => null, 'sellerName' => $fresh->seller->name, 'buyerName' => $fresh->buyer->name,
+    ])->render();
     expect($html)->toContain(number_format($deal->vehicle->current_mileage + 5))
         ->toContain('☒</span></td><td>'.OdometerStatus::Actual->certification())
         ->toContain('☐</span></td><td>'.OdometerStatus::NotActual->certification())

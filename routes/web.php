@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopVerificationController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TransferController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,7 +52,7 @@ Route::middleware(['signed', 'throttle:20,1'])->group(function () {
 });
 
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
-Route::get('/robots.txt', fn () => response("User-agent: *\nDisallow: /admin\nDisallow: /garage\nDisallow: /deals\nDisallow: /p/\nDisallow: /verify/\n\nSitemap: ".route('sitemap')."\n")
+Route::get('/robots.txt', fn () => response("User-agent: *\nDisallow: /admin\nDisallow: /garage\nDisallow: /deals\nDisallow: /p/\nDisallow: /verify/\nDisallow: /transfer/\n\nSitemap: ".route('sitemap')."\n")
     ->header('Content-Type', 'text/plain'))->name('robots');
 
 /*
@@ -59,6 +60,9 @@ Route::get('/robots.txt', fn () => response("User-agent: *\nDisallow: /admin\nDi
 | Signed-in
 |--------------------------------------------------------------------------
 */
+
+// A transfer link someone was sent for a car they bought outside the marketplace.
+Route::get('/transfer/{token}', [TransferController::class, 'show'])->name('transfers.show')->middleware('throttle:30,1');
 
 Route::middleware('auth')->group(function () {
     Route::get('/garage', [GarageController::class, 'index'])->name('garage');
@@ -84,6 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/deals/{deal}', [DealController::class, 'show'])->name('deals.show')->middleware('can:view,deal');
     Route::get('/deals/{deal}/bill-of-sale.pdf', [DealController::class, 'billOfSale'])->name('deals.bill-of-sale')->middleware('can:view,deal');
     Route::get('/deals/{deal}/odometer-disclosure.pdf', [DealController::class, 'odometerDisclosure'])->name('deals.odometer-disclosure')->middleware('can:view,deal');
+    Route::get('/transfers/{transfer}/odometer-disclosure.pdf', [TransferController::class, 'odometerDisclosure'])->name('transfers.odometer-disclosure');
 
     Route::get('/saved', [MarketplaceController::class, 'saved'])->name('saved');
 

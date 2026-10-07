@@ -52,6 +52,7 @@ Beast Mode Motors gives each car a **passport**: a running record kept by its ow
   - A **pre-purchase inspection checklist** (18 points) for the buyer or their mechanic.
   - A **handover checklist** where each person ticks only their own steps.
   - A **paperwork** card: a generated **bill of sale** and, for cars that need one (model year 2011+ until they're 20), the federal **odometer disclosure statement**, filled in with the seller's handover reading and odometer certification. Plus a handover checklist that points to the state DMV rather than guessing at state rules.
+- **Sold somewhere else?** If the car sells privately, as a trade-in or to family, the owner sends a **one-time transfer link** with the handover reading and odometer certification. The new owner (signing up first if they need to) types the last 6 characters of the VIN off the car, and the passport moves exactly as after a sale here. Links expire after 7 days, and only a hash of each link is stored.
 - **Scam shield.** Messages mentioning gift cards, wire transfers, fake escrow or shipping agents, "deployed overseas", verification codes or overpayment get flagged to the recipient with plain-English advice.
 - **Ownership transfer.** When both people confirm the handover, the passport moves to the buyer's garage as Owner N. Earlier owners' records become read-only, so a new owner can't rewrite the car's past. What travels with the car and what stays private:
 

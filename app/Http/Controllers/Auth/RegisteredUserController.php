@@ -46,6 +46,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('garage', absolute: false));
+        // Back to where they were heading, such as a transfer link they were sent.
+        return redirect()->intended(route('garage', absolute: false));
     }
 }
