@@ -31,6 +31,12 @@ class User extends Authenticatable implements FilamentUser
         'city',
         'state',
         'password',
+        'price_drop_alerts',
+    ];
+
+    /** Matches the column defaults, so a just-created account reads the same as one loaded from the database. */
+    protected $attributes = [
+        'price_drop_alerts' => true,
     ];
 
     /**
@@ -50,6 +56,7 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'price_drop_alerts' => 'boolean',
         ];
     }
 
@@ -81,7 +88,7 @@ class User extends Authenticatable implements FilamentUser
      */
     public function savedListings(): BelongsToMany
     {
-        return $this->belongsToMany(Listing::class, 'saved_listings')->withTimestamps();
+        return $this->belongsToMany(Listing::class, 'saved_listings')->withPivot('notified_price_cents')->withTimestamps();
     }
 
     /**

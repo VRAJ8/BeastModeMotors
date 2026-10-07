@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 /**
- * A buyer's saved marketplace searches: what matches now, and whether to email new matches.
+ * A buyer's saved marketplace searches (what matches now, whether to email new matches), and whether to email
+ * price drops on the cars they saved.
  */
 class SavedSearches extends Component
 {
@@ -16,6 +17,12 @@ class SavedSearches extends Component
     {
         $search = $this->find($id);
         $search->update(['email_alerts' => ! $search->email_alerts, 'notified_through' => now()]);
+    }
+
+    public function togglePriceDrops(): void
+    {
+        $user = Auth::user();
+        $user->update(['price_drop_alerts' => ! $user->price_drop_alerts]);
     }
 
     public function delete(int $id): void
@@ -27,6 +34,7 @@ class SavedSearches extends Component
     public function render()
     {
         return view('livewire.saved-searches', [
+            'priceDrops' => Auth::user()->price_drop_alerts,
             'searches' => Auth::user()->savedSearches()->get()->map(fn (SavedSearch $search) => [
                 'search' => $search,
                 'criteria' => $search->criteria(),

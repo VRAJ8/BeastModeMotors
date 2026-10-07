@@ -41,7 +41,8 @@ class ListingActions extends Component
             return $this->redirectRoute('login');
         }
 
-        Auth::user()->savedListings()->toggle($this->listing->getKey());
+        // Remember the price they saved it at: price-drop alerts compare against it.
+        Auth::user()->savedListings()->toggle([$this->listing->getKey() => ['notified_price_cents' => $this->listing->price_cents]]);
 
         return null;
     }

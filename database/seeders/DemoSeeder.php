@@ -155,6 +155,12 @@ class DemoSeeder extends Seeder
             $listings[$who] = $this->list($car, $price, $city, $state, $zip, $desc, daysAgo: mt_rand(2, 30));
         }
 
+        // Tom cut his price last week, and Sam had saved the car at the old one: a price drop to show.
+        $listings['tom']->update(['price_cents' => 2_290_000]);
+        $this->people['sam']->savedListings()->attach($listings['tom'], ['notified_price_cents' => 2_290_000]);
+        $listings['tom']->update(['price_cents' => 2_150_000]);
+        $listings['tom']->update(['price_dropped_at' => now()->subDays(6)]);
+
         // Recalls (illustrative demo data, not real NHTSA campaigns).
         $tesla->recalls()->create(['campaign_number' => 'DEMO-24V-017', 'component' => 'Electrical system: 12V power distribution', 'summary' => 'Demo recall: a connector in the 12V power distribution system may lose contact, which can disable some displays.', 'consequence' => 'Loss of rear-view camera image increases the risk of a crash.', 'remedy' => 'Dealers will inspect and replace the connector free of charge.', 'reported_on' => now()->subMonths(2)]);
         $porsche->recalls()->create(['campaign_number' => 'DEMO-20V-482', 'component' => 'Seats: front seat belt pretensioner', 'summary' => 'Demo recall: the pretensioner wiring may be routed too close to the seat frame.', 'remedy' => 'Wiring re-routed by a dealer.', 'reported_on' => '2020-08-03', 'resolved_at' => '2020-10-15']);
