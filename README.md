@@ -158,7 +158,7 @@ vendor/bin/pint --test                 # code style
 
 ### One-click demo on Render (free)
 1. Fork the repo. In Render choose **New → Blueprint** and select it; Render reads [`render.yaml`](render.yaml).
-2. Set `APP_KEY` (from `php artisan key:generate --show`) and `APP_URL` (your Render URL).
+2. Set `APP_KEY` (from `php artisan key:generate --show`). `APP_URL` defaults to the service's `onrender.com` address.
 3. Deploy. On first boot the container migrates and seeds the demo (`DEMO_MODE=true`).
 
 The free plan has no persistent disk, so the demo resets on restart.

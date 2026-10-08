@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 /**
@@ -27,6 +28,30 @@ final class ImageMetadata
         }
 
         return $path;
+    }
+
+    /**
+     * Store several uploads, all or none, before anything is written to the database. If the disk refuses one,
+     * the ones already stored are removed and the form shows an error on $field, so retrying is safe.
+     *
+     * @param  array<int, UploadedFile>  $files
+     * @return array<int, string> the stored paths, in the same order as $files
+     */
+    public static function storeAllClean(array $files, string $directory, string $disk, string $field): array
+    {
+        $paths = [];
+
+        try {
+            foreach ($files as $i => $file) {
+                $paths[$i] = self::storeClean($file, $directory, $disk);
+            }
+        } catch (RuntimeException) {
+            Storage::disk($disk)->delete(array_values($paths));
+
+            throw ValidationException::withMessages([$field => 'We couldn\'t save that file. Please try again in a minute.']);
+        }
+
+        return $paths;
     }
 
     public static function strip(string $bytes): string

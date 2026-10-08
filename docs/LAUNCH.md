@@ -86,7 +86,7 @@ R2 makes a bucket either entirely public or entirely private, so use one of each
 > **Already running the free demo from `render.yaml`?** Keep it as its own Blueprint, and never point both
 > Blueprints at the same service. The production blueprint uses different names (`beast-mode-motors-prod` and
 > `beast-mode-motors-db`), so applying it creates new resources and leaves the demo alone. Don't use the
-> "copy over `render.yaml`" fallback in step 3 while a demo Blueprint still reads `render.yaml`: delete the demo
+> "copy over `render.yaml`" fallback in item 3 below while a demo Blueprint still reads `render.yaml`: delete the demo
 > Blueprint and its service first.
 
 1. Push this repo to your GitHub account if it isn't there already.
@@ -109,9 +109,10 @@ R2 makes a bucket either entirely public or entirely private, so use one of each
 6. Optional: to read receipts with Claude, open the service's **Environment**, add `ANTHROPIC_API_KEY` with your
    key and save. Without it, the "Fill from receipt" button is hidden.
 
-If Render rejects a plan name in the blueprint (`starter` for the app, `basic-256mb` for the database), choose the
-nearest paid plan in the dashboard. Don't use the free web plan: it sleeps when idle, which stops the email
-worker and the daily jobs.
+If Render rejects a plan name in the blueprint (`starter` for the app, `basic-256mb` for the database), change
+`plan:` for that resource in `render.production.yaml` to the nearest paid plan Render lists, commit, push and apply
+the Blueprint again. Change it in the file, not in the dashboard: the next Blueprint sync would put the old value
+back. Don't use the free web plan: it sleeps when idle, which stops the email worker and the daily jobs.
 
 ## 5. Your domain
 

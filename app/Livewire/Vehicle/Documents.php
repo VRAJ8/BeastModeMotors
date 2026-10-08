@@ -43,12 +43,14 @@ class Documents extends Component
             'expires_on' => ['nullable', 'date'],
         ]);
 
+        [$path] = ImageMetadata::storeAllClean([$this->file], "vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents'), 'file');
+
         $this->vehicle->documents()->create([
             'ownership_id' => $this->vehicle->currentOwnership?->getKey(),
             'uploaded_by' => Auth::id(),
             'type' => $this->type,
             'name' => $this->name,
-            'path' => ImageMetadata::storeClean($this->file, "vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
+            'path' => $path,
             'mime' => $this->file->getMimeType(),
             'size' => $this->file->getSize(),
             'expires_on' => $this->expires_on ?: null,
