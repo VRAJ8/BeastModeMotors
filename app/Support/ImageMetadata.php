@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Removes EXIF/XMP/text metadata (GPS position, device serials, timestamps) from uploaded images
@@ -13,11 +14,17 @@ final class ImageMetadata
 {
     /**
      * Store an upload on a disk with its metadata stripped. Returns the stored path.
+     *
+     * Throws when the disk refuses the write (the storage error itself is logged by the disk), so no photo or
+     * receipt row is ever saved pointing at a file that doesn't exist.
      */
     public static function storeClean(UploadedFile $file, string $directory, string $disk): string
     {
         $path = trim($directory, '/').'/'.$file->hashName();
-        Storage::disk($disk)->put($path, self::strip((string) file_get_contents($file->getRealPath())));
+
+        if (! Storage::disk($disk)->put($path, self::strip((string) file_get_contents($file->getRealPath())))) {
+            throw new RuntimeException("Could not store the upload on the [{$disk}] disk.");
+        }
 
         return $path;
     }

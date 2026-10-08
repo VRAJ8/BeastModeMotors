@@ -36,3 +36,31 @@ it('stores receipts and photos on whichever disks are configured', function () {
     $document->delete();
     Storage::disk('s3')->assertMissing($document->path);
 });
+
+it('keeps photos in the main bucket when AWS_PUBLIC_BUCKET is left blank', function () {
+    $disk = configWithEnv('filesystems.php', ['AWS_BUCKET' => 'one-bucket', 'AWS_PUBLIC_BUCKET' => '', 'AWS_URL' => '', 'AWS_PUBLIC_URL' => ''])['disks']['s3-public'];
+
+    expect($disk['bucket'])->toBe('one-bucket')
+        ->and($disk['url'])->toBeNull();
+
+    $split = configWithEnv('filesystems.php', ['AWS_BUCKET' => 'receipts', 'AWS_PUBLIC_BUCKET' => 'photos', 'AWS_PUBLIC_URL' => 'https://photos.example.com'])['disks'];
+
+    expect($split['s3']['bucket'])->toBe('receipts')
+        ->and($split['s3-public']['bucket'])->toBe('photos')
+        ->and($split['s3-public']['url'])->toBe('https://photos.example.com');
+});
+
+it('saves nothing when the storage service refuses an upload', function () {
+    // An S3 disk with no bucket: the SDK rejects every write before sending anything.
+    config([
+        'filesystems.disks.refusing' => ['driver' => 's3', 'key' => 'k', 'secret' => 's', 'region' => 'us-east-1', 'bucket' => '', 'throw' => false],
+        'passport.disks.photos' => 'refusing',
+    ]);
+    $vehicle = car();
+
+    expect(fn () => Livewire::actingAs($vehicle->owner)->test(Sell::class, ['vehicle' => $vehicle])
+        ->set('photos', [UploadedFile::fake()->image('front.jpg')]))
+        ->toThrow(RuntimeException::class, 'Could not store the upload');
+
+    expect($vehicle->photos()->count())->toBe(0);
+});

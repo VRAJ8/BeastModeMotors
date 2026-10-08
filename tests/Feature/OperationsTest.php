@@ -357,17 +357,44 @@ it('accepts extra hostnames exactly, never look-alikes', function () {
         ->and($accepted('evil.net'))->toBeFalse();
 });
 
-it('only rebuilds the demo nightly when that is switched on explicitly', function (bool $demo, bool $nightly, bool $runs) {
-    config(['passport.demo' => $demo, 'passport.demo_nightly_reset' => $nightly]);
+it('trusts the hostname Render gives the service, and uses its address until APP_URL is set', function () {
+    $render = ['RENDER_EXTERNAL_HOSTNAME' => 'bmm-prod-ab12.onrender.com', 'RENDER_EXTERNAL_URL' => 'https://bmm-prod-ab12.onrender.com'];
+
+    $fresh = configWithEnv('app.php', $render + ['APP_URL' => '', 'TRUSTED_HOSTS' => '']);
+    expect($fresh['url'])->toBe('https://bmm-prod-ab12.onrender.com')
+        ->and($fresh['trusted_hosts'])->toBe(['bmm-prod-ab12.onrender.com']);
+
+    $live = configWithEnv('app.php', $render + ['APP_URL' => 'https://beastmodemotors.com', 'TRUSTED_HOSTS' => 'beastmodemotors.net, bmm-prod-ab12.onrender.com']);
+    expect($live['url'])->toBe('https://beastmodemotors.com')
+        ->and($live['trusted_hosts'])->toBe(['beastmodemotors.net', 'bmm-prod-ab12.onrender.com']);
+
+    $elsewhere = configWithEnv('app.php', ['APP_URL' => '', 'TRUSTED_HOSTS' => '', 'RENDER_EXTERNAL_HOSTNAME' => '', 'RENDER_EXTERNAL_URL' => '']);
+    expect($elsewhere['url'])->toBe('http://localhost')
+        ->and($elsewhere['trusted_hosts'])->toBe([]);
+});
+
+it('only rebuilds the demo nightly when that is switched on explicitly', function (bool $demo, bool $nightly, string $database, bool $runs) {
+    $connection = config('database.default');
+    config(['passport.demo' => $demo, 'passport.demo_nightly_reset' => $nightly, 'database.default' => $database]);
 
     $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains($e->command, 'demo:seed'));
+    $passes = $event->filtersPass(app());
+    config(['database.default' => $connection]); // the test's own transaction is rolled back on this connection
 
-    expect($event->filtersPass(app()))->toBe($runs);
+    expect($passes)->toBe($runs);
 })->with([
-    'demo with nightly reset' => [true, true, true],
-    'demo without it' => [true, false, false],
-    'not a demo' => [false, true, false],
+    'demo with nightly reset' => [true, true, 'sqlite', true],
+    'demo without it' => [true, false, 'sqlite', false],
+    'not a demo' => [false, true, 'sqlite', false],
+    'demo settings on a real database server' => [true, true, 'pgsql', false],
 ]);
+
+it('sends scheduled jobs\' output to the configured log', function () {
+    foreach (app(Schedule::class)->events() as $event) {
+        expect($event->output)->toBe(config('passport.schedule_output'))
+            ->and($event->shouldAppendOutput)->toBeTrue();
+    }
+});
 
 it('refuses to wipe a database that is not a demo', function () {
     config(['passport.demo' => false]);

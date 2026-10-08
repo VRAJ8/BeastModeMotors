@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Enums\FuelType;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 
 /**
@@ -87,7 +86,7 @@ final class ListingFilters
             $this->q !== '' ? "“{$this->q}”" : null,
             $this->make ?: null,
             $this->fuel ? FuelType::from($this->fuel)->getLabel() : null,
-            $this->maxPrice !== null ? 'Under '.Number::currency($this->maxPrice, 'USD', precision: 0) : null,
+            $this->maxPrice !== null ? 'Under '.money($this->maxPrice * 100) : null,
             $this->minYear !== null ? "{$this->minYear} or newer" : null,
             $this->maxMiles !== null ? 'Under '.number_format($this->maxMiles).' mi' : null,
             $this->minScore > 0 ? "Score {$this->minScore}+" : null,

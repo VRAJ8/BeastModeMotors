@@ -163,16 +163,21 @@ vendor/bin/pint --test                 # code style
 
 The free plan has no persistent disk, so the demo resets on restart.
 
+### Going live
+[`docs/LAUNCH.md`](docs/LAUNCH.md) walks through a real launch step by step: Render with Postgres (using
+[`render.production.yaml`](render.production.yaml)), Cloudflare R2 for files, Resend for email, your domain, and your
+first admin account (`php artisan passport:make-admin you@example.com`).
+
 ### Production checklist
-Everything is configured through environment variables (see [`.env.example`](.env.example) and the notes at the end of [`render.yaml`](render.yaml)):
+Everything is configured through environment variables (see [`.env.example`](.env.example)):
 
 | Need | Setting |
 | --- | --- |
 | Persistent database | `DB_CONNECTION=pgsql` and `DB_URL` (e.g. Render PostgreSQL) |
-| Receipts & photos that survive deploys | `DOCUMENTS_DISK=s3`, `PHOTOS_DISK=s3-public` and the `AWS_*` keys (S3 or Cloudflare R2; set `AWS_ENDPOINT` and `AWS_PUBLIC_URL` for R2) |
+| Receipts & photos that survive deploys | `DOCUMENTS_DISK=s3`, `PHOTOS_DISK=s3-public` and the `AWS_*` keys. Receipts go in the private `AWS_BUCKET`. For Cloudflare R2, or S3 buckets with ACLs disabled, put photos in a separate public bucket: `AWS_PUBLIC_BUCKET`, `AWS_PUBLIC_URL` and `AWS_PUBLIC_ACL=false` |
 | Real email (shop verification needs it) | Any SMTP provider, e.g. Resend: `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.resend.com`, `MAIL_PORT=465`, `MAIL_SCHEME=smtps`, `MAIL_USERNAME=resend`, `MAIL_PASSWORD=<api key>` |
 | Emails, reminders, recall checks, expiry | Built in: the image runs a queue worker and the scheduler (`QUEUE_CONNECTION=database`). Running several web containers? Keep `RUN_SCHEDULER=true` on all of them (jobs take a lock) or on just one |
-| Custom domain | Keep `APP_URL` on the main domain and list other hostnames in `TRUSTED_HOSTS` |
+| Custom domain | Keep `APP_URL` on the main domain and list other hostnames in `TRUSTED_HOSTS`. Add a new domain to `TRUSTED_HOSTS` before adding it on the platform, whose health checks may switch to it straight away |
 | Receipt scanning (optional) | `ANTHROPIC_API_KEY`. Uses `claude-opus-5-5` at low effort (`RECEIPT_SCANNER_MODEL`, `RECEIPT_SCANNER_EFFORT`), capped at `RECEIPT_SCANS_PER_DAY` per person |
 | Turn off the demo | `DEMO_MODE=false` and `DEMO_NIGHTLY_RESET=false` |
 
@@ -184,7 +189,7 @@ docker run -p 8080:8080 -e APP_KEY=base64:... -e APP_URL=http://localhost:8080 \
   -e DEMO_MODE=true -e MAIL_MAILER=log beast-mode-motors
 ```
 
-The image is a multi-stage build: Vite assets, then `composer install --no-dev`, then Nginx + PHP-FPM with OPcache. On start it migrates, links storage and caches config. A queue worker (emails and in-app notifications, retried on failure) and the scheduler (reminders, recall checks, offer and request expiry) run in the same container under s6. If you run them elsewhere instead, set `RUN_QUEUE_WORKER=false` / `RUN_SCHEDULER=false`. The app only answers to `APP_URL`'s host and its subdomains: add any other names, such as an apex domain or the platform's own hostname, to `TRUSTED_HOSTS`.
+The image is a multi-stage build: Vite assets, then `composer install --no-dev`, then Nginx + PHP-FPM with OPcache. On start it migrates, links storage and caches config. A queue worker (emails and in-app notifications, retried on failure) and the scheduler (reminders, recall checks, offer and request expiry) run in the same container under s6. If you run them elsewhere instead, set `RUN_QUEUE_WORKER=false` / `RUN_SCHEDULER=false`. The app only answers to `APP_URL`'s host and its subdomains: add any other names, such as an apex domain, to `TRUSTED_HOSTS`. On Render, the service's own `onrender.com` name is always accepted, and `APP_URL` defaults to it.
 
 ## Architecture notes
 

@@ -48,3 +48,27 @@ function deal(?Listing $listing = null, DealStatus $status = DealStatus::Open): 
         'status' => $status,
     ])->fresh();
 }
+
+/**
+ * Evaluate a config file as if the server had these environment variables (an empty string is a blank line in .env).
+ */
+function configWithEnv(string $file, array $env): array
+{
+    $before = array_map(fn ($key) => array_key_exists($key, $_SERVER) ? [$_SERVER[$key]] : null, array_combine(array_keys($env), array_keys($env)));
+
+    try {
+        foreach ($env as $key => $value) {
+            $_SERVER[$key] = $value;
+        }
+
+        return require config_path($file);
+    } finally {
+        foreach ($before as $key => $value) {
+            if ($value === null) {
+                unset($_SERVER[$key]);
+            } else {
+                $_SERVER[$key] = $value[0];
+            }
+        }
+    }
+}
