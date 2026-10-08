@@ -15,7 +15,9 @@ use App\Services\ReceiptReader;
 use App\Services\ShopVerifier;
 use App\Support\ImageMetadata;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
@@ -312,35 +314,49 @@ class RecordForm extends Component
             'provider_email' => $diy ? null : ($shop->email ?? ($this->provider_email ?: null)),
         ];
 
-        if ($this->record) {
-            // A shop-verified record keeps its facts; only the notes and attachments can change.
-            if (! $locked) {
-                $this->record->update($facts + ['description' => $this->description ?: null]);
-            }
-            $record = $this->record;
-        } else {
-            $record = $this->vehicle->records()->create($facts + [
-                'description' => $this->description ?: null,
-                'ownership_id' => $this->vehicle->currentOwnership?->getKey(),
-                'logged_by' => Auth::id(),
-            ]);
-        }
+        // Files first: if storage refuses one, nothing is saved and the owner can simply try again.
+        $disk = config('passport.disks.documents');
+        $paths = ImageMetadata::storeAllClean($this->receipts, "vehicles/{$this->vehicle->getKey()}/documents", $disk, 'receipts');
 
-        foreach ($this->receipts as $file) {
-            $record->documents()->create([
-                'vehicle_id' => $this->vehicle->getKey(),
-                'ownership_id' => $this->vehicle->currentOwnership?->getKey(),
-                'uploaded_by' => Auth::id(),
-                'type' => DocumentType::Receipt,
-                'name' => str($file->getClientOriginalName())->beforeLast('.')->limit(150)->toString() ?: 'Receipt',
-                'path' => ImageMetadata::storeClean($file, "vehicles/{$this->vehicle->getKey()}/documents", config('passport.disks.documents')),
-                'mime' => $file->getMimeType(),
-                'size' => $file->getSize(),
-            ]);
-        }
+        try {
+            $record = DB::transaction(function () use ($facts, $locked, $paths, $planner) {
+                if ($this->record) {
+                    // A shop-verified record keeps its facts; only the notes and attachments can change.
+                    if (! $locked) {
+                        $this->record->update($facts + ['description' => $this->description ?: null]);
+                    }
+                    $record = $this->record;
+                } else {
+                    $record = $this->vehicle->records()->create($facts + [
+                        'description' => $this->description ?: null,
+                        'ownership_id' => $this->vehicle->currentOwnership?->getKey(),
+                        'logged_by' => Auth::id(),
+                    ]);
+                }
 
-        if (! $locked) {
-            $planner->applyRecord($record, array_map('intval', $this->reminderIds));
+                foreach ($this->receipts as $i => $file) {
+                    $record->documents()->create([
+                        'vehicle_id' => $this->vehicle->getKey(),
+                        'ownership_id' => $this->vehicle->currentOwnership?->getKey(),
+                        'uploaded_by' => Auth::id(),
+                        'type' => DocumentType::Receipt,
+                        'name' => str($file->getClientOriginalName())->beforeLast('.')->limit(150)->toString() ?: 'Receipt',
+                        'path' => $paths[$i],
+                        'mime' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                    ]);
+                }
+
+                if (! $locked) {
+                    $planner->applyRecord($record, array_map('intval', $this->reminderIds));
+                }
+
+                return $record;
+            });
+        } catch (\Throwable $e) {
+            Storage::disk($disk)->delete(array_values($paths));
+
+            throw $e;
         }
 
         $message = $this->record ? 'Record updated.' : 'Record added to the passport.';

@@ -64,13 +64,18 @@ class Sell extends Component
             throw $e;
         }
 
+        try {
+            $paths = ImageMetadata::storeAllClean($this->photos, "vehicles/{$this->vehicle->getKey()}/photos", config('passport.disks.photos'), 'photos');
+        } catch (ValidationException $e) {
+            $this->photos = [];
+
+            throw $e;
+        }
+
         $position = (int) $this->vehicle->photos()->max('position');
 
-        foreach ($this->photos as $photo) {
-            $this->vehicle->photos()->create([
-                'path' => ImageMetadata::storeClean($photo, "vehicles/{$this->vehicle->getKey()}/photos", config('passport.disks.photos')),
-                'position' => ++$position,
-            ]);
+        foreach ($paths as $path) {
+            $this->vehicle->photos()->create(['path' => $path, 'position' => ++$position]);
         }
 
         $this->photos = [];

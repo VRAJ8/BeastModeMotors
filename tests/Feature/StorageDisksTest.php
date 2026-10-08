@@ -50,17 +50,28 @@ it('keeps photos in the main bucket when AWS_PUBLIC_BUCKET is left blank', funct
         ->and($split['s3-public']['url'])->toBe('https://photos.example.com');
 });
 
-it('saves nothing when the storage service refuses an upload', function () {
+it('saves nothing when the storage service refuses an upload, so trying again is safe', function () {
     // An S3 disk with no bucket: the SDK rejects every write before sending anything.
     config([
         'filesystems.disks.refusing' => ['driver' => 's3', 'key' => 'k', 'secret' => 's', 'region' => 'us-east-1', 'bucket' => '', 'throw' => false],
         'passport.disks.photos' => 'refusing',
+        'passport.disks.documents' => 'refusing',
     ]);
-    $vehicle = car();
+    $vehicle = car(['current_mileage' => 30000]);
+    $records = $vehicle->records()->count();
 
-    expect(fn () => Livewire::actingAs($vehicle->owner)->test(Sell::class, ['vehicle' => $vehicle])
-        ->set('photos', [UploadedFile::fake()->image('front.jpg')]))
-        ->toThrow(RuntimeException::class, 'Could not store the upload');
+    Livewire::actingAs($vehicle->owner)->test(Sell::class, ['vehicle' => $vehicle])
+        ->set('photos', [UploadedFile::fake()->image('front.jpg')])
+        ->assertHasErrors('photos')
+        ->assertSet('photos', []);
 
-    expect($vehicle->photos()->count())->toBe(0);
+    $form = Livewire::actingAs($vehicle->owner)->test(RecordForm::class, ['vehicle' => $vehicle])
+        ->set('title', 'Brakes')->set('mileage', 30100)->set('provider_name', 'Shop')
+        ->set('receipts', [UploadedFile::fake()->create('invoice.pdf', 50, 'application/pdf')]);
+    $form->call('save')->assertHasErrors('receipts');
+    $form->call('save')->assertHasErrors('receipts');
+
+    expect($vehicle->photos()->count())->toBe(0)
+        ->and($vehicle->records()->count())->toBe($records)
+        ->and($vehicle->documents()->count())->toBe(0);
 });
